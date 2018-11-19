@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from ritz import ritz, parse_config, notifier, caseType, caseState
+from ritz import ritz, parse_config, notifier, caseType, caseState, __version__
 import curses
 import curses.textpad
 import logging
@@ -11,11 +11,6 @@ import textwrap
 
 
 log = logging.getLogger("cuRitz")
-log.setLevel(logging.DEBUG)
-log.addHandler(logging.FileHandler('curitz.log'))
-
-__version__ = "0.2.0"
-
 
 def interfaceRenamer(s):
     s = s.replace("HundredGigE", "Hu")
@@ -582,9 +577,15 @@ if __name__ == "__main__":
                         help='zino config file')
     parser.add_argument('--nocolor', action='store_true',
                         help='Show client in black-n-white mode')
+    parser.add_argument('--debug', action='store_true',
+                        help='write debug logfile')
     args = parser.parse_args()
 
     conf = parse_config("~/.ritz.tcl")
+    
+    if args.debug:
+      log.setLevel(logging.DEBUG)
+      log.addHandler(logging.FileHandler('curitz.log'))
 
     if args.profile:
         if args.profile not in conf.keys():
