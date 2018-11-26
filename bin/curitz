@@ -232,11 +232,16 @@ def create_case_list():
                         color = cRed
                     elif case.bfdstate == 'down' and case.state in [caseState.WORKING, caseState.WAITING]:
                         color = cYellow
+
+                    try:
+                        port = case.bfdaddr
+                    except Exception:
+                        port = "ix {}".format(case.bfdix)
                     lb.add(BoxElement(case.id,
                                       table_structure.format(
                                           **common,
                                           opstate="BFD  %s" % case.bfdstate[0:5],
-                                          port=str(case.bfdaddr),
+                                          port=str(port),
                                           description="{}, {}".format(case.get('neigh_rdns'),
                                                                       case.get('lastevent'))
                                       ), color))
