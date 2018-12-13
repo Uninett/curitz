@@ -62,6 +62,20 @@ def uiShowLogWindow(screen, heading, lines):
             # Move down one element in list
             if box.active_element < len(lines) - 1:
                 box.active_element += 1
+                
+        elif x == curses.KEY_NPAGE:
+            a = box.active_element + box.pagesize
+            if a < len(lb) - 1:
+                box.active_element = a
+            else:
+                box.active_element = len(box) - 1
+
+        elif x == curses.KEY_PPAGE:
+            a = box.active_element - box.pagesize
+            if a > 0:
+                box.active_element = a
+            else:
+                box.active_element = 0
         else:
             return
         box.draw()
