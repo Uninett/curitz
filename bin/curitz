@@ -505,7 +505,7 @@ def uiSetStateWindow(screen, number):
 
             elif x == curses.KEY_DOWN:
                 # Move down one element in list
-                if box.active_element < len(lb) - 1:
+                if box.active_element < len(box) - 1:
                     box.active_element += 1
 
             elif x == ord('o') or x == ord('O'):
