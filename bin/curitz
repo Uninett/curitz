@@ -62,7 +62,7 @@ def uiShowLogWindow(screen, heading, lines):
             # Move down one element in list
             if box.active_element < len(lines) - 1:
                 box.active_element += 1
-                
+
         elif x == curses.KEY_NPAGE:
             a = box.active_element + box.pagesize
             if a < len(lb) - 1:
@@ -404,6 +404,16 @@ def runner(screen):
             else:
                 uiUpdateCases(screen, [lb.active.id])
 
+        elif x == ord('U'):
+            update_ui = 999
+            # Update selected cases
+            if cases_selected:
+                uiUpdateCases(screen, cases_selected)
+                uiSetState(screen, cases_selected)
+            else:
+                uiUpdateCases(screen, [lb.active.id])
+                uiSetState(screen, [lb.active.id])
+
         elif x == ord('s'):
             update_ui = 999
             # Update selected cases
@@ -452,10 +462,8 @@ def runner(screen):
 def draw(screen):
     screen.erase()
     screen.addstr(0, 0, "cuRitz version {}  -  {}".format(__version__, c_server), curses.A_BOLD)
-    screen.addstr(screen_size.height - 3, 0, "y=Remove Closed"[:screen_size.length - 1])
-
-    screen.addstr(screen_size.height - 2, 0, "x=(de)select  c=Clear selection  s=Set State  u=Update History"[:screen_size.length - 1])
-
+    screen.addstr(screen_size.height - 3, 0, "y=Remove Closed                  U=Update History and Set State"[:screen_size.length - 1])
+    screen.addstr(screen_size.height - 2, 0, "x=(de)select  c=Clear selection  s=Set State  u=Update History "[:screen_size.length - 1])
     screen.addstr(screen_size.height - 1, 0, "q=Quit  l=Show Logs   <ENTER>=Show history  <UP/DOWN>=Navigate "[:screen_size.length - 1])
     screen.noutrefresh()
     lb.draw()
@@ -486,6 +494,7 @@ def uiSetStateWindow(screen, number):
     try:
         box = listbox(9, 62, 4, 9)
         box.heading = "Set state on {} cases".format(number)
+        box.add("DON'T CHANGE")
         box.add("Open")
         box.add("Working")
         box.add("wAiting")
@@ -509,20 +518,23 @@ def uiSetStateWindow(screen, number):
                     box.active_element += 1
 
             elif x == ord('o') or x == ord('O'):
-                box.active_element = 0
-            elif x == ord('w') or x == ord('W'):
                 box.active_element = 1
-            elif x == ord('a') or x == ord('A'):
+            elif x == ord('w') or x == ord('W'):
                 box.active_element = 2
-            elif x == ord('n') or x == ord('N'):
+            elif x == ord('a') or x == ord('A'):
                 box.active_element = 3
-            elif x == ord('i') or x == ord('I'):
+            elif x == ord('n') or x == ord('N'):
                 box.active_element = 4
-            elif x == ord('c' or x == ord('C')):
+            elif x == ord('i') or x == ord('I'):
                 box.active_element = 5
+            elif x == ord('c') or x == ord('C'):
+                box.active_element = 6
             elif x == curses.KEY_ENTER or x == 13 or x == 10:
-                return box.active.lower()
-            elif x == 27:  # ESC
+                if box.active_element == 0:
+                    raise KeyboardInterrupt("No Change pressed")
+                else:
+                    return box.active.lower()
+            elif x == 27 or x == ord('q') or x == ord('Q'):  # ESC and Q
                 raise KeyboardInterrupt("ESC pressed")
 
             box.draw()
@@ -601,7 +613,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     conf = parse_config("~/.ritz.tcl")
-    
+
     if args.debug:
       log.setLevel(logging.DEBUG)
       log.addHandler(logging.FileHandler('curitz.log'))
