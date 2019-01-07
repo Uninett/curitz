@@ -8,6 +8,7 @@ import datetime
 import argparse
 import sys
 import textwrap
+import re
 
 
 log = logging.getLogger("cuRitz")
@@ -62,7 +63,7 @@ def uiShowLogWindow(screen, heading, lines):
             # Move down one element in list
             if box.active_element < len(lines) - 1:
                 box.active_element += 1
-                
+
         elif x == curses.KEY_NPAGE:
             a = box.active_element + box.pagesize
             if a < len(lb) - 1:
@@ -124,7 +125,8 @@ def strfdelta(tdelta, fmt):
 
 
 def main(screen):
-    global lb, session, notifier, cases, table_structure, screen_size
+    global lb, session, notifier, cases, table_structure, screen_size, casefilter
+    casefilter = ""
 
     curses.noecho()
     curses.cbreak()
@@ -160,18 +162,36 @@ def main(screen):
             except KeyboardInterrupt:
                 pass
 
-
-def sortCases(casedict, field="lasttrans"):
+def sortCases(casedict, field="lasttrans", filter=""):
     cases_sorted = []
     for key in sorted(cases, key=lambda k: cases[k]._attrs[field]):
-        cases_sorted.append(key)
+        show = False
+        if "type" in cases[key]._attrs:
+            if re.match(".*{}".format(filter), str(cases[key].get("type")), re.IGNORECASE):
+                show = True
+        if "state" in cases[key]._attrs:
+            if re.match(".*{}".format(filter), str(cases[key].get("state")), re.IGNORECASE):
+                show = True
+        if "router" in cases[key]._attrs:
+            if re.match(".*{}".format(filter), str(cases[key].get("router")), re.IGNORECASE):
+                show = True
+        if "descr" in cases[key]._attrs:
+            if re.match(".*{}".format(filter), str(cases[key].get("descr")), re.IGNORECASE):
+                show = True
+        if "port" in cases[key]._attrs:
+            if re.match(".*{}".format(filter), str(cases[key].get("port")), re.IGNORECASE):
+                show = True
+
+        if show:
+            cases_sorted.append(key)
+
     return reversed(cases_sorted)
 
 
 def create_case_list():
-    global cases, visible_cases, lb, cases_selected
+    global cases, visible_cases, lb, cases_selected, casefilter
     visible_cases = cases.keys()
-    sorted_cases = sortCases(cases, field="updated")
+    sorted_cases = sortCases(cases, field="updated", filter=casefilter)
 
     lb.clear()
     lb.heading = table_structure.format(
@@ -383,6 +403,11 @@ def runner(screen):
             else:
                 lb.active_element = 0
 
+        elif x == ord('f'):
+            # Change Filter
+            if uiSimpleFilterWindow(screen):
+                update_ui = 999
+
         elif x == ord('x'):
             update_ui = 999
             # (de)select a element
@@ -403,6 +428,16 @@ def runner(screen):
                 uiUpdateCases(screen, cases_selected)
             else:
                 uiUpdateCases(screen, [lb.active.id])
+
+        elif x == ord('U'):
+            update_ui = 999
+            # Update selected cases
+            if cases_selected:
+                uiUpdateCases(screen, cases_selected)
+                uiSetState(screen, cases_selected)
+            else:
+                uiUpdateCases(screen, [lb.active.id])
+                uiSetState(screen, [lb.active.id])
 
         elif x == ord('s'):
             update_ui = 999
@@ -452,10 +487,8 @@ def runner(screen):
 def draw(screen):
     screen.erase()
     screen.addstr(0, 0, "cuRitz version {}  -  {}".format(__version__, c_server), curses.A_BOLD)
-    screen.addstr(screen_size.height - 3, 0, "y=Remove Closed"[:screen_size.length - 1])
-
-    screen.addstr(screen_size.height - 2, 0, "x=(de)select  c=Clear selection  s=Set State  u=Update History"[:screen_size.length - 1])
-
+    screen.addstr(screen_size.height - 3, 0, "y=Remove Closed   f=Filter       U=Update History and Set State"[:screen_size.length - 1])
+    screen.addstr(screen_size.height - 2, 0, "x=(de)select  c=Clear selection  s=Set State  u=Update History "[:screen_size.length - 1])
     screen.addstr(screen_size.height - 1, 0, "q=Quit  l=Show Logs   <ENTER>=Show history  <UP/DOWN>=Navigate "[:screen_size.length - 1])
     screen.noutrefresh()
     lb.draw()
@@ -486,6 +519,7 @@ def uiSetStateWindow(screen, number):
     try:
         box = listbox(9, 62, 4, 9)
         box.heading = "Set state on {} cases".format(number)
+        box.add("DON'T CHANGE")
         box.add("Open")
         box.add("Working")
         box.add("wAiting")
@@ -505,24 +539,27 @@ def uiSetStateWindow(screen, number):
 
             elif x == curses.KEY_DOWN:
                 # Move down one element in list
-                if box.active_element < len(lb) - 1:
+                if box.active_element < len(box) - 1:
                     box.active_element += 1
 
             elif x == ord('o') or x == ord('O'):
-                box.active_element = 0
-            elif x == ord('w') or x == ord('W'):
                 box.active_element = 1
-            elif x == ord('a') or x == ord('A'):
+            elif x == ord('w') or x == ord('W'):
                 box.active_element = 2
-            elif x == ord('n') or x == ord('N'):
+            elif x == ord('a') or x == ord('A'):
                 box.active_element = 3
-            elif x == ord('i') or x == ord('I'):
+            elif x == ord('n') or x == ord('N'):
                 box.active_element = 4
-            elif x == ord('c' or x == ord('C')):
+            elif x == ord('i') or x == ord('I'):
                 box.active_element = 5
+            elif x == ord('c') or x == ord('C'):
+                box.active_element = 6
             elif x == curses.KEY_ENTER or x == 13 or x == 10:
-                return box.active.lower()
-            elif x == 27:  # ESC
+                if box.active_element == 0:
+                    raise KeyboardInterrupt("No Change pressed")
+                else:
+                    return box.active.lower()
+            elif x == 27 or x == ord('q') or x == ord('Q'):  # ESC and Q
                 raise KeyboardInterrupt("ESC pressed")
 
             box.draw()
@@ -556,6 +593,34 @@ def uiUpdateCaseWindow(screen, number):
         pass
 
     return text
+
+
+def uiSimpleFilterWindow(screen):
+    global casefilter
+    border = curses.newwin(9, 62, 4, 9)
+    textbox = curses.newwin(1, 60, 6, 10)
+    textbox.addstr(0,0, casefilter)
+    border.box()
+    border.addstr(0, 1, "Really Simple Filter Generator")
+    border.addstr(8, 1, "Ctrl+C to Abort    [ENTER] OK    Ctrl+H = Backspace")
+    border.refresh()
+    p = curses.textpad.Textbox(textbox)
+    try:
+        curses.curs_set(1)
+    except Exception:
+        pass
+    try:
+        text = p.edit()
+    except KeyboardInterrupt:
+        return ""
+    try:
+        curses.curs_set(0)
+    except Exception:
+        pass
+
+    casefilter = text.strip()
+    log.debug(repr(casefilter))
+    return True
 
 
 def poll():
@@ -601,7 +666,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     conf = parse_config("~/.ritz.tcl")
-    
+
     if args.debug:
       log.setLevel(logging.DEBUG)
       log.addHandler(logging.FileHandler('curitz.log'))
