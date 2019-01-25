@@ -2,6 +2,7 @@
 from ritz import ritz, parse_config, notifier, caseType, caseState, __version__, ProtocolError, NotConnectedError
 import curses
 import curses.textpad
+import ritz.textpad as utf8textpad
 import logging
 from culistbox import listbox, BoxSize, BoxElement
 import datetime
@@ -594,7 +595,11 @@ def uiUpdateCaseWindow(screen, number):
     border.addstr(8, 1, "Ctrl+C to Abort    Ctrl+G to send    Ctrl+H = Backspace")
     border.addstr(1, 1, "{} case(s) selected for update".format(number))
     border.refresh()
-    p = curses.textpad.Textbox(textbox)
+    if args.utf8:
+        p = utf8textpad.Textbox(textbox)
+    else:
+        p = curses.textpad.Textbox(textbox)
+
     try:
         curses.curs_set(1)
     except Exception:
@@ -620,7 +625,11 @@ def uiSimpleFilterWindow(screen):
     border.addstr(0, 1, "Really Simple Filter Generator")
     border.addstr(8, 1, "Ctrl+C to Abort    [ENTER] OK    Ctrl+H = Backspace")
     border.refresh()
-    p = curses.textpad.Textbox(textbox)
+    if args.utf8:
+        p = utf8textpad.Textbox(textbox)
+    else:
+        p = curses.textpad.Textbox(textbox)
+
     try:
         curses.curs_set(1)
     except Exception:
@@ -679,8 +688,9 @@ if __name__ == "__main__":
                         help='Show client in black-n-white mode')
     parser.add_argument('--debug', action='store_true',
                         help='write debug logfile')
+    parser.add_argument('-8', action='store_true', dest='utf8',
+                        help='Enable input of UTF8, does not work on all platforms')
     args = parser.parse_args()
-
     conf = parse_config("~/.ritz.tcl")
 
     if args.debug:
