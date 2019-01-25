@@ -15,6 +15,13 @@ import time
 
 log = logging.getLogger("cuRitz")
 
+def updateStatus(screen, text):
+    screen.addnstr(0, screen_size.length-16, "{:<16}".format(text[:16]), 100)
+    screen.noutrefresh()
+    screen.refresh()
+    curses.doupdate()
+
+
 def interfaceRenamer(s):
     s = s.replace("HundredGigE", "Hu")
     s = s.replace("GigabitEthernet", "Gi")
@@ -88,24 +95,25 @@ def uiShowLogWindow(screen, heading, lines):
 def uiShowHistory(screen, caseid):
     global cases
     lines = []
+    updateStatus(screen, "Waiting...")
     for line in cases[caseid].history:
         lines.append("{} {}".format(line["date"], line["header"]))
         for l in line["log"]:
             for wrapped_line in textwrap.wrap(l, 76, break_long_words=False):
                 lines.append("  {}".format(wrapped_line))
+    updateStatus(screen, "")
     uiShowLogWindow(screen, "History Case {} - {}".format(caseid, cases[caseid].get("descr", "")), lines)
-
 
 def uiShowLog(screen, caseid):
     global cases
     lines = []
+    updateStatus(screen, "Waiting...")
     for line in cases[caseid].log:
         lines.append("{}".format(line["date"]))
         for l in textwrap.wrap(line["header"], 76, break_long_words=False):
             lines.append("  {}".format(l))
-
+    updateStatus(screen, "")
     uiShowLogWindow(screen, "System Log Case {} - {}".format(caseid, cases[caseid].get("descr", "")), lines)
-
 
 def uiShowAttr(screen, caseid):
     global cases
@@ -150,7 +158,10 @@ def main(screen):
     except Exception:
         pass
     screen_size = BoxSize(*screen.getmaxyx())
-    lb = listbox(screen_size.height - 6, screen_size.length, 1, 0)
+    if args.kiosk:
+        lb = listbox(screen_size.height - 1, screen_size.length, 1, 0)
+    else:
+        lb = listbox(screen_size.height - 4, screen_size.length, 1, 0)
 
     screen.clear()
     screen.refresh()
@@ -363,17 +374,18 @@ def runner(screen):
             # Screen is resized
             update_ui = 999
             screen_size = BoxSize(*screen.getmaxyx())
-            lb.resize(screen_size.height - 6, screen_size.length)
-            screen.addnstr(screen_size.height - 5, 0, "refreshed..", 100)
-            screen.refresh()
+            if args.kiosk:
+                lb.resize(screen_size.height - 1, screen_size.length)
+            else:
+                lb.resize(screen_size.height - 4, screen_size.length)
+            updateStatus(screen, 'refreshed')
 
-        screen.addstr(0, screen_size.length - 8, "ch:{:3}".format(x))
 
         while poll():
             update_ui = 999
-            screen.addstr(0, screen_size.length - 16, "Polling")
+            updateStatus(screen, "Polling")
 
-        screen.addstr(0, screen_size.length - 16, "        ")
+        updateStatus(screen, "ch:{:3}".format(x))
 
         if x == -1:
             # Nothing happened, check for changes
@@ -492,13 +504,9 @@ def runner(screen):
 
         if time.time() - keepalive > 60:
             keepalive = time.time()
-            screen.addnstr(screen_size.height - 5, 0, "Sending keepalive", 100)
-            screen.noutrefresh()
-            curses.doupdate()
+            updateStatus(screen, "Sending keepalive")
             doKeepalive()
-            screen.addnstr(screen_size.height - 5, 0, "                 ", 100)
-            screen.noutrefresh()
-            curses.doupdate()
+            updateStatus(screen, "")
         
 
 def draw(screen):
@@ -690,6 +698,8 @@ if __name__ == "__main__":
                         help='write debug logfile')
     parser.add_argument('-8', action='store_true', dest='utf8',
                         help='Enable input of UTF8, does not work on all platforms')
+    parser.add_argument('--kiosk', action='store_true',
+                        help='Hides all keybinding fields')
     args = parser.parse_args()
     conf = parse_config("~/.ritz.tcl")
 
