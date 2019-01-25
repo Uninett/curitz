@@ -660,13 +660,22 @@ def poll():
     global cases, cases_selected
     update = notifier.poll()
     if update:
+        log.debug("Updating case: {}  {}".format(update.id, update.info))
         if update.id not in cases:
             if update.type != "state":
                 # Update on unknown case thats not a state update
                 # We just exit and wait for a state on that object
                 return
         if update.type == "state":
-            cases[update.id] = session.case(update.id)
+            states = update.info.split(" ")
+            if states[1] == "closed" and args.autoremove:
+                log.debug("Automatically removing {} because of autoremove argument".format(update.id))
+                cases.pop(update.id, None)
+                log.debug("List after remove: {}".format(cases.keys()))
+                if update.id in cases_selected:
+                    cases_selected.remove(update.id)
+            else:
+                cases[update.id] = session.case(update.id)
         elif update.type == "attr":
             cases[update.id] = session.case(update.id)
         elif update.type == "history":
@@ -700,6 +709,8 @@ if __name__ == "__main__":
                         help='Enable input of UTF8, does not work on all platforms')
     parser.add_argument('--kiosk', action='store_true',
                         help='Hides all keybinding fields')
+    parser.add_argument('--autoremove', action='store_true',
+                        help='Automatically remove closed cases')
     args = parser.parse_args()
     conf = parse_config("~/.ritz.tcl")
 
