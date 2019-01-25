@@ -9,6 +9,7 @@ import argparse
 import sys
 import textwrap
 import re
+import time
 
 
 log = logging.getLogger("cuRitz")
@@ -351,7 +352,8 @@ def runner(screen):
     lb.draw()
     draw(screen)
 
-    update_ui = 0
+    update_ui = time.time()
+    keepalive = time.time()
 
     while True:
         x = screen.getch()
@@ -481,14 +483,22 @@ def runner(screen):
             # CTRL + L
             update_ui = 999
 
-        if update_ui > 12:
+        if time.time() - update_ui > 10:
+            update_ui = time.time()
             create_case_list()
             lb.draw()
             draw(screen)
-            doKeepalive()
-            update_ui = 0
-        update_ui += 1
 
+        if time.time() - keepalive > 60:
+            keepalive = time.time()
+            screen.addnstr(screen_size.height - 5, 0, "Sending keepalive", 100)
+            screen.noutrefresh()
+            curses.doupdate()
+            doKeepalive()
+            screen.addnstr(screen_size.height - 5, 0, "                 ", 100)
+            screen.noutrefresh()
+            curses.doupdate()
+        
 
 def draw(screen):
     screen.erase()
