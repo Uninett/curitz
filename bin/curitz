@@ -504,9 +504,9 @@ def runner(screen):
 def draw(screen):
     screen.erase()
     screen.addstr(0, 0, "cuRitz version {}  -  {}".format(__version__, c_server), curses.A_BOLD)
-    screen.addstr(screen_size.height - 3, 0, "y=Remove Closed   f=Filter       U=Update History and Set State"[:screen_size.length - 1])
-    screen.addstr(screen_size.height - 2, 0, "x=(de)select  c=Clear selection  s=Set State  u=Update History "[:screen_size.length - 1])
-    screen.addstr(screen_size.height - 1, 0, "q=Quit  l=Show Logs   <ENTER>=Show history  <UP/DOWN>=Navigate "[:screen_size.length - 1])
+    screen.addstr(screen_size.height - 3, 0, "<=>=Display attributes"[:screen_size.length - 1])
+    screen.addstr(screen_size.height - 2, 0, "s=Set State   u=Update History    U=Update History and Set State    f=Filter   y=Remove Closed"[:screen_size.length - 1])
+    screen.addstr(screen_size.height - 1, 0, "<ENTER>=Show history  <UP/DOWN>=Navigate q=Quit  l=Show Logs   x=(de)select  c=Clear selection"[:screen_size.length - 1])
     screen.noutrefresh()
     lb.draw()
     curses.doupdate()
