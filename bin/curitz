@@ -11,7 +11,17 @@ import sys
 import textwrap
 import re
 import time
+import locale
+import os
 
+# Hotfix to fix OSX reporting only "UTF-8" on LC_CTYPE
+try:
+    loc = locale.getlocale()
+except ValueError:
+    loc = None, None
+if loc  == (None, None) and os.environ["LC_CTYPE"] == "UTF-8":
+    locale.setlocale(locale.LC_CTYPE, "en_US.UTF-8")
+# End UTF-8 Hotfix
 
 log = logging.getLogger("cuRitz")
 
@@ -596,6 +606,7 @@ def uiSetStateWindow(screen, number):
 
 
 def uiUpdateCaseWindow(screen, number):
+    global USE_UTF8
     border = curses.newwin(9, 62, 4, 9)
     textbox = curses.newwin(5, 60, 6, 10)
     border.box()
@@ -603,7 +614,7 @@ def uiUpdateCaseWindow(screen, number):
     border.addstr(8, 1, "Ctrl+C to Abort    Ctrl+G to send    Ctrl+H = Backspace")
     border.addstr(1, 1, "{} case(s) selected for update".format(number))
     border.refresh()
-    if args.utf8:
+    if USE_UTF8:
         p = utf8textpad.Textbox(textbox)
     else:
         p = curses.textpad.Textbox(textbox)
@@ -633,7 +644,7 @@ def uiSimpleFilterWindow(screen):
     border.addstr(0, 1, "Really Simple Filter Generator")
     border.addstr(8, 1, "Ctrl+C to Abort    [ENTER] OK    Ctrl+H = Backspace")
     border.refresh()
-    if args.utf8:
+    if USE_UTF8:
         p = utf8textpad.Textbox(textbox)
     else:
         p = curses.textpad.Textbox(textbox)
@@ -705,13 +716,28 @@ if __name__ == "__main__":
                         help='Show client in black-n-white mode')
     parser.add_argument('--debug', action='store_true',
                         help='write debug logfile')
-    parser.add_argument('-8', action='store_true', dest='utf8',
-                        help='Enable input of UTF8, does not work on all platforms')
+    parser.add_argument('--utf8', action='store_true',
+                        help='Force usage of UTF8 encoding')
+    parser.add_argument('--ascii', action='store_true',
+                        help='Force usage of ASCII encoding')
     parser.add_argument('--kiosk', action='store_true',
                         help='Hides all keybinding fields')
     parser.add_argument('--autoremove', action='store_true',
                         help='Automatically remove closed cases')
     args = parser.parse_args()
+
+    if args.ascii and args.utf8:
+        sys.exit('ASCII encoding and UTF-8 encoding can\'t be enabled at the same time')
+    elif args.ascii:
+        USE_UTF8=False
+    elif args.utf8 or locale.getpreferredencoding() == "UTF-8":
+        USE_UTF8=True
+    else:
+        USE_UTF8=False
+
+
+
+
     conf = parse_config("~/.ritz.tcl")
 
     if args.debug:
