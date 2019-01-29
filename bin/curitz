@@ -68,6 +68,8 @@ def uiShowLogWindow(screen, heading, lines):
         box.add(l)
 
     box.draw()
+    screen.noutrefresh()
+    curses.doupdate()
 
     while True:
         x = screen.getch()
@@ -99,6 +101,7 @@ def uiShowLogWindow(screen, heading, lines):
         else:
             return
         box.draw()
+        screen.noutrefresh()
         curses.doupdate()
 
 
@@ -476,7 +479,6 @@ def runner(screen):
                 uiSetState(screen, cases_selected)
             else:
                 uiSetState(screen, [lb.active.id])
-            curses.flash()
 
         elif x == ord('y'):
             update_ui = 999
@@ -562,6 +564,8 @@ def uiSetStateWindow(screen, number):
         box.add("Ignored")
         box.add("Closed")
         box.draw()
+        screen.noutrefresh()
+        curses.doupdate()
 
         while True:
             x = screen.getch()
