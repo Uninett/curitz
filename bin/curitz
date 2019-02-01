@@ -146,6 +146,16 @@ def strfdelta(tdelta, fmt):
     d["minutes"], d["seconds"] = divmod(rem, 60)
     return fmt.format(**d)
 
+def downtimeShortner(td):
+    log.debug(td)
+    if td.days > 0:
+        return "{:2d}d".format(td.days)
+    if td.seconds<60:
+        return "{:2d}s".format(td.seconds)
+    if td.seconds/60<60:
+        return "{:2.0f}m".format(td.seconds/60)
+    if td.seconds/60/60<60:
+        return "{:2.0f}h".format(td.seconds/60/60)
 
 def main(screen):
     global lb, session, notifier, cases, table_structure, screen_size, casefilter
@@ -179,7 +189,7 @@ def main(screen):
     screen.clear()
     screen.refresh()
 
-    table_structure = "{selected:1} {opstate:11} {admstate:8} {age:9} {router:16} {port:14} {description}"
+    table_structure = "{selected:1} {opstate:11} {admstate:8} {age:9} {downtime:3} {router:16} {port:14} {description}"
 
     with ritz(c_server, username=c_user, password=c_secret) as session:
         with notifier(session) as notifier:
@@ -227,7 +237,8 @@ def create_case_list():
         router="Router",
         port="Port",
         description="Description",
-        age=" Age")
+        age=" Age",
+        downtime="Dt")
     for c in sorted_cases:
         if c in visible_cases:
             case = cases[c]
@@ -239,6 +250,10 @@ def create_case_list():
                 common['admstate'] = case.state.value[:7]
                 common['age'] = strfdelta(age, "{days:2d}d {hours:02}:{minutes:02}")
                 common['priority'] = case.priority
+                if "downtime" in case.keys():
+                    common["downtime"] = downtimeShortner(case.downtime)
+                else:
+                    common["downtime"] = ""
                 color = []
                 if args.nocolor:
                     cRed = [curses.A_BOLD]
@@ -260,6 +275,8 @@ def create_case_list():
                         color = cRed
                     elif case.portstate in ['down', 'lowerLayerDown'] and case.state in [caseState.WORKING, caseState.WAITING]:
                         color = cYellow
+                    if "downtime" in case.keys():
+                        downtime = downtimeShortner(case.downtime) 
                     lb.add(BoxElement(case.id,
                                       table_structure.format(
                                           **common,
