@@ -131,8 +131,8 @@ def uiShowLog(screen, caseid):
 def uiShowAttr(screen, caseid):
     global cases
     lines = []
-    for line in cases[caseid]._attrs:
-        lines.append("{:<15} : {:>}".format(line, repr(cases[caseid]._attrs[line])))
+    for line in cases[caseid].keys():
+        lines.append("{:<15} : {:>}".format(line, repr(cases[caseid][line])))
 
     uiShowLogWindow(screen, "Case {} - {}".format(caseid, cases[caseid].get("descr", "")), lines)
 
