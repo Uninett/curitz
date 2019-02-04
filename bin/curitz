@@ -731,7 +731,7 @@ if __name__ == "__main__":
                         help='use Zino profile')
     parser.add_argument('--profiles', action='store_true',
                         help='List Zino profiles')
-    parser.add_argument('-c', '--config', nargs=1, default='~/.ritz.tcl',
+    parser.add_argument('-c', '--config', default='~/.ritz.tcl',
                         help='zino config file')
     parser.add_argument('--nocolor', action='store_true',
                         help='Show client in black-n-white mode')
@@ -758,8 +758,10 @@ if __name__ == "__main__":
 
 
 
-
-    conf = parse_config("~/.ritz.tcl")
+    if args.config:
+        conf = parse_config(args.config)
+    else:
+        conf = parse_config("~/.ritz.tcl")
 
     if args.debug:
       log.setLevel(logging.DEBUG)
