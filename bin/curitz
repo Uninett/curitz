@@ -757,11 +757,14 @@ if __name__ == "__main__":
         USE_UTF8=False
 
 
-
-    if args.config:
-        conf = parse_config(args.config)
-    else:
-        conf = parse_config("~/.ritz.tcl")
+    try:
+        if args.config:
+            conf = parse_config(args.config)
+        else:
+            conf = parse_config("~/.ritz.tcl")
+    except FileNotFoundError as E:
+        sys.stderr.write("Unable to load configuration for curitz:\n")
+        sys.exit("{}".format(E))
 
     if args.debug:
       log.setLevel(logging.DEBUG)
