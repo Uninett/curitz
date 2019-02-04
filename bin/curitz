@@ -87,10 +87,10 @@ def uiShowLogWindow(screen, heading, lines):
 
         elif x == curses.KEY_NPAGE:
             a = box.active_element + box.pagesize
-            if a < len(lb) - 1:
+            if a < len(box) - 1:
                 box.active_element = a
             else:
-                box.active_element = len(box) - 1
+                box.active_element = len(lines) - 1
 
         elif x == curses.KEY_PPAGE:
             a = box.active_element - box.pagesize
