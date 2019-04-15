@@ -49,17 +49,14 @@ def interfaceRenamer(s):
 def uiShowLogWindow(screen, heading, lines):
     (screen_y, screen_x) = screen.getmaxyx()
 
-    center_x = screen_x // 2
-    if center_x < 40:
-        center_x = 40
     if screen_y < 30:
-        box_h = screen_y - 8
+        box_h = screen_y - 10
     else:
         box_h = 30
     box = listbox(box_h,
-                  80,
-                  3,
-                  center_x - 40)
+                  screen_x-2,
+                  4,
+                  1)
 
     # Display box on the midle of screen
     box.heading = heading
@@ -119,12 +116,13 @@ def uiShowHistory(screen, caseid):
 
 def uiShowLog(screen, caseid):
     global cases
+    (screen_y, screen_x) = screen.getmaxyx()
+
     lines = []
     updateStatus(screen, "Waiting...")
     for line in cases[caseid].log:
-        lines.append("{}".format(line["date"]))
-        for l in textwrap.wrap(line["header"], 76, break_long_words=False):
-            lines.append("  {}".format(l))
+        for l in textwrap.wrap("{} {}".format(line["date"], line["header"]), screen_x-4, break_long_words=False):
+            lines.append("{}".format(l))
     updateStatus(screen, "")
     uiShowLogWindow(screen, "System Log Case {} - {}".format(caseid, cases[caseid].get("descr", "")), lines)
 
