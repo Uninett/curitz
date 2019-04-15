@@ -505,6 +505,9 @@ def runner(screen):
                 cases.pop(id, None)
                 if id in cases_selected:
                     cases_selected.remove(id)
+            if lb.active_element >= len(lb) - 2:
+                lb.active_element = len(lb) - 2
+
 
         elif x == ord("="):
             update_ui = 999
