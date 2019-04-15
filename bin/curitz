@@ -539,6 +539,8 @@ def runner(screen):
         
 
 def draw(screen):
+
+    screen_size = BoxSize(*screen.getmaxyx())
     screen.erase()
     screen.addstr(0, 0, "cuRitz version {}  -  {}".format(__version__, c_server), curses.A_BOLD)
     screen.addstr(screen_size.height - 3, 0, "<=>=Display attributes"[:screen_size.length - 1])
