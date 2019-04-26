@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from ritz import ritz, parse_config, notifier, caseType, caseState, __version__, ProtocolError, NotConnectedError
+from ritz import ritz, parse_config, notifier as ritz_notifier, caseType, caseState, __version__, ProtocolError, NotConnectedError
 import curses
 import curses.textpad
 import ritz.textpad as utf8textpad
@@ -190,7 +190,7 @@ def main(screen):
     table_structure = "{selected:1} {opstate:11} {admstate:8} {age:9} {downtime:3} {router:16} {port:14} {description}"
 
     with ritz(c_server, username=c_user, password=c_secret) as session:
-        with notifier(session) as notifier:
+        with ritz_notifier(session) as notifier:
             try:
                 runner(screen)
             except KeyboardInterrupt:
@@ -692,7 +692,7 @@ def uiSimpleFilterWindow(screen):
 
 
 def poll():
-    global cases, cases_selected
+    global cases, cases_selected, notifier
     update = notifier.poll()
     if update:
         log.debug("Updating case: {}  {}".format(update.id, update.info))
