@@ -453,6 +453,7 @@ def runner(screen):
             # Change Filter
             if uiSimpleFilterWindow(screen):
                 update_ui = 999
+            lb.active_element = 0
 
         elif x == ord('x'):
             update_ui = 999
