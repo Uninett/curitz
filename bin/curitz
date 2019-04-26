@@ -116,7 +116,7 @@ def uiShowHistory(screen, caseid):
 
 def uiShowLog(screen, caseid):
     global cases
-    (screen_y, screen_x) = screen.getmaxyx()
+    screen_x = screen.getmaxyx()[1]
 
     lines = []
     updateStatus(screen, "Waiting...")
@@ -273,8 +273,6 @@ def create_case_list():
                         color = cRed
                     elif case.portstate in ['down', 'lowerLayerDown'] and case.state in [caseState.WORKING, caseState.WAITING]:
                         color = cYellow
-                    if "downtime" in case.keys():
-                        downtime = downtimeShortner(case.downtime) 
                     lb.add(BoxElement(case.id,
                                       table_structure.format(
                                           **common,
@@ -355,7 +353,7 @@ def create_case_list():
                 else:
                   log.error("Unable to create table for case {}".format(case.id))
                   log.error(repr(case._attrs))
-            except Exception as e:
+            except Exception:
                 log.exception("Exception while createing table entry for case {}".format(case.id))
                 log.fatal(repr(case._attrs))
                 raise
@@ -363,7 +361,7 @@ def create_case_list():
 def doKeepalive():
     try:
         session.case(0)
-    except ProtocolError as E:
+    except ProtocolError:
         pass
 
 def runner(screen):
