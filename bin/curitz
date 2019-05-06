@@ -373,7 +373,10 @@ def runner(screen):
     draw(screen)
     caselist = session.get_caseids()
     for c in caselist:
-        case = session.case(c)
+        try:
+            case = session.case(c)
+        except:
+            continue
         cases[case.id] = case
         elements = int((len(cases) / len(caselist)) * 20)
         screen.addstr(9, 10,
