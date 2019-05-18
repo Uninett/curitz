@@ -56,7 +56,8 @@ def uiShowLogWindow(screen, heading, lines):
     box = listbox(box_h,
                   screen_x-2,
                   4,
-                  1)
+                  1,
+                  current_selected_arrow=">" if args.arrow else "")
 
     # Display box on the midle of screen
     box.heading = heading
@@ -180,9 +181,9 @@ def main(screen):
         pass
     screen_size = BoxSize(*screen.getmaxyx())
     if args.kiosk:
-        lb = listbox(screen_size.height - 1, screen_size.length, 1, 0)
+        lb = listbox(screen_size.height - 1, screen_size.length, 1, 0, current_selected_arrow=">" if args.arrow else "")
     else:
-        lb = listbox(screen_size.height - 4, screen_size.length, 1, 0)
+        lb = listbox(screen_size.height - 4, screen_size.length, 1, 0, current_selected_arrow=">" if args.arrow else "")
 
     screen.clear()
     screen.refresh()
@@ -576,7 +577,7 @@ def uiSetState(screen, caseids):
 
 def uiSetStateWindow(screen, number):
     try:
-        box = listbox(9, 62, 4, 9)
+        box = listbox(9, 62, 4, 9, current_selected_arrow=">" if args.arrow else "")
         box.heading = "Set state on {} cases".format(number)
         box.add("DON'T CHANGE")
         box.add("Open")
@@ -750,6 +751,8 @@ if __name__ == "__main__":
                         help='Hides all keybinding fields')
     parser.add_argument('--autoremove', action='store_true',
                         help='Automatically remove closed cases')
+    parser.add_argument('--arrow', action='store_true',
+                        help="Use arrow for current element marker")
     args = parser.parse_args()
 
     if args.ascii and args.utf8:
