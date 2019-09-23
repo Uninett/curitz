@@ -54,10 +54,11 @@ def uiShowLogWindow(screen, heading, lines):
     else:
         box_h = 30
     box = listbox(box_h,
-                  screen_x-2,
+                  screen_x,
                   4,
-                  1,
-                  current_selected_arrow=">" if args.arrow else "")
+                  0,
+                  current_selected_arrow=">" if args.arrow else "",
+                  lr_border=False)
 
     # Display box on the midle of screen
     box.heading = heading
