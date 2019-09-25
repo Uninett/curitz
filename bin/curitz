@@ -23,6 +23,9 @@ if loc  == (None, None) and os.environ["LC_CTYPE"] == "UTF-8":
     locale.setlocale(locale.LC_CTYPE, "en_US.UTF-8")
 # End UTF-8 Hotfix
 
+table_structure_no_id = "{selected:1} {opstate:11} {admstate:8} {age:9} {downtime:3} {router:16} {port:14} {description}"
+table_structure_id = "{selected:1}{id:5} {opstate:11} {admstate:8} {age:9} {downtime:3} {router:16} {port:14} {description}"
+table_structure = table_structure_no_id
 log = logging.getLogger("cuRitz")
 
 def updateStatus(screen, text):
@@ -189,7 +192,7 @@ def main(screen):
     screen.clear()
     screen.refresh()
 
-    table_structure = "{selected:1} {opstate:11} {admstate:8} {age:9} {downtime:3} {router:16} {port:14} {description}"
+    
 
     with ritz(c_server, username=c_user, password=c_secret) as session:
         with ritz_notifier(session) as notifier:
@@ -231,6 +234,7 @@ def create_case_list():
 
     lb.clear()
     lb.heading = table_structure.format(
+        id="  ID",
         selected="S",
         opstate="OpState",
         admstate="AdmState",
@@ -245,6 +249,7 @@ def create_case_list():
             try:
                 age = datetime.datetime.now() - case.opened
                 common = {}
+                common['id'] = case.id
                 common['selected'] = "*" if case.id in cases_selected else " "
                 common['router'] = case.router
                 common['admstate'] = case.state.value[:7]
@@ -367,7 +372,7 @@ def doKeepalive():
         pass
 
 def runner(screen):
-    global cases, cases_selected, screen_size
+    global cases, cases_selected, screen_size, table_structure
     # Get all data for the first time
     cases = {}
     cases_selected = []
@@ -497,6 +502,14 @@ def runner(screen):
                 uiUpdateCases(screen, [lb.active.id])
                 uiSetState(screen, [lb.active.id])
 
+        elif x == ord('i'):
+            update_ui = 999
+            # Update selected cases
+            if "{id" in table_structure:
+                table_structure = table_structure_no_id
+            else:
+                table_structure = table_structure_id
+
         elif x == ord('s'):
             update_ui = 999
             # Update selected cases
@@ -554,7 +567,7 @@ def draw(screen):
     screen_size = BoxSize(*screen.getmaxyx())
     screen.erase()
     screen.addstr(0, 0, "cuRitz version {}  -  {}".format(__version__, c_server), curses.A_BOLD)
-    screen.addstr(screen_size.height - 3, 0, "<=>=Display attributes  m=Clear Flapping"[:screen_size.length - 1])
+    screen.addstr(screen_size.height - 3, 0, "<=>=Display attributes  m=Clear Flapping   i=Show/Hide ID"[:screen_size.length - 1])
     screen.addstr(screen_size.height - 2, 0, "s=Set State   u=Update History    U=Update History and Set State    f=Filter   y=Remove Closed"[:screen_size.length - 1])
     screen.addstr(screen_size.height - 1, 0, "<ENTER>=Show history  <UP/DOWN>=Navigate q=Quit  l=Show Logs   x=(de)select  c=Clear selection"[:screen_size.length - 1])
     screen.noutrefresh()
