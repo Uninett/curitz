@@ -26,9 +26,21 @@ if loc  == (None, None) and os.environ["LC_CTYPE"] == "UTF-8":
 table_structure_no_id = "{selected:1} {opstate:11} {admstate:8} {age:9} {downtime:3} {router:16} {port:14} {description}"
 table_structure_id = "{selected:1}{id:5} {opstate:11} {admstate:8} {age:9} {downtime:3} {router:16} {port:14} {description}"
 table_structure = table_structure_no_id
+
+cases = {}
+visible_cases = []
+cases_selected = []
+
+screen_size = None
+lb = None
+session = None
+notifier = None
+casefilter = None
+
 log = logging.getLogger("cuRitz")
 
 def updateStatus(screen, text):
+    global screen_size
     screen.addnstr(0, screen_size.length-16, "{:<16}".format(text[:16]), 100)
     screen.noutrefresh()
     screen.refresh()
