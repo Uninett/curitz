@@ -473,7 +473,7 @@ def runner(screen):
 
         elif x == ord('f'):
             # Change Filter
-            if uiSimpleFilterWindow(screen):
+            uiSimpleFilterWindow(screen)
                 update_ui = 999
             lb.active_element = 0
 
