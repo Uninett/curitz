@@ -474,7 +474,7 @@ def runner(screen):
         elif x == ord('f'):
             # Change Filter
             uiSimpleFilterWindow(screen)
-                update_ui = 999
+            update_ui = 999
             lb.active_element = 0
 
         elif x == ord('m'):
@@ -513,7 +513,7 @@ def runner(screen):
             else:
                 uiUpdateCases(screen, [lb.active.id])
                 uiSetState(screen, [lb.active.id])
-
+        
         elif x == ord('i'):
             update_ui = 999
             # Update selected cases
