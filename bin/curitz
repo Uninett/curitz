@@ -666,8 +666,10 @@ def uiSetStateWindow(screen, number):
 
 def uiUpdateCaseWindow(screen, number):
     global USE_UTF8
-    border = curses.newwin(9, 62, 4, 9)
-    textbox = curses.newwin(5, 60, 6, 10)
+    (screen_y, screen_x) = screen.getmaxyx()
+
+    border = curses.newwin(9, screen_x, 4, 0)
+    textbox = curses.newwin(5, screen_x-2, 6, 1)
     border.box()
     border.addstr(0, 1, "Add new history line")
     border.addstr(8, 1, "Ctrl+C to Abort    Ctrl+G to send    Ctrl+H = Backspace")
