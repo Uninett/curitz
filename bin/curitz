@@ -13,6 +13,8 @@ import re
 import time
 import locale
 import os
+import traceback
+import importlib
 
 # Hotfix to fix OSX reporting only "UTF-8" on LC_CTYPE
 try:
@@ -103,6 +105,87 @@ def uiShowLogWindow(screen, heading, lines):
         box.draw()
         screen.noutrefresh()
         curses.doupdate()
+
+def plugin_loader(plugin_name, filename):
+    """Loads a plugin class from a external file"""
+    try:
+        log.info("Loading plugin from: {}".format(filename))
+        spec = importlib.util.spec_from_file_location("plugin", filename)
+        foo = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(foo)
+        mod = getattr(foo, plugin_name)
+        return mod
+    except Exception:
+        log.error(traceback.format_exc())
+        return None
+
+
+
+def import_plugins(dir):
+    """Imports all plugins from a directory"""
+    plugins = {}
+    try:
+        for _ in os.listdir(dir):
+            if _.endswith(".py"):
+                pl_name = _[0:-3]
+                pl = plugin_loader(pl_name, dir + "/" + _)
+                if pl:
+                    try:
+                        plugins[pl_name] = pl()
+                    except Exception:
+                        log.error(traceback.format_exc())
+    except FileNotFoundError:
+        pass
+    return plugins
+
+
+def actionPlugin(screen, caseid):
+    plugins = {}
+    plugins.update(import_plugins(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/action_plugin"))
+    plugins.update(import_plugins(os.path.expanduser("/usr/share/curitz/action_plugin")))
+    plugins.update(import_plugins(os.path.expanduser("~/.curitz/action_plugin")))
+
+    pkeys = list(plugins.keys())
+    try:
+        box = listbox(9, 62, 4, 9)
+        for k in pkeys:
+            box.add(plugins[k].description or "UNKNOWN PLUGIN")
+        box.heading = "Select plugin"
+        
+        box.draw()
+        screen.noutrefresh()
+        curses.doupdate()
+
+        while True:
+            x = screen.getch()
+            if x == -1:
+                pass
+            elif x == curses.KEY_UP:
+                # Move up one element in list
+                if box.active_element > 0:
+                    box.active_element -= 1
+
+            elif x == curses.KEY_DOWN:
+                # Move down one element in list
+                if box.active_element < len(box) - 1:
+                    box.active_element += 1
+
+            elif x == curses.KEY_ENTER or x == 13 or x == 10:
+                try:
+                    plugins[pkeys[box.active_element]].action(screen, cases[caseid])
+                    return
+                except Exception as E:
+                    log.error("traceback while executing actionplugin: {}".format(pkeys[box.active_element]))
+                    log.error(traceback.format_exc())
+                    return
+                    
+            elif x == 27 or x == ord('q') or x == ord('Q'):  # ESC and Q
+                raise KeyboardInterrupt("ESC pressed")
+
+            box.draw()
+            curses.doupdate()
+    except KeyboardInterrupt:
+        box.clear()
 
 
 def uiShowHistory(screen, caseid):
@@ -507,6 +590,10 @@ def runner(screen):
                 cases.pop(id, None)
                 if id in cases_selected:
                     cases_selected.remove(id)
+
+        elif x == ord('1'):
+            update_ui = 999
+            actionPlugin(screen, lb.active.id)
 
         elif x == ord("="):
             update_ui = 999
