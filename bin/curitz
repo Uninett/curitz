@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from ritz import ritz, parse_config, notifier, caseType, caseState, __version__, ProtocolError, NotConnectedError
+from ritz import ritz, parse_config, notifier as ritz_notifier, caseType, caseState, __version__, ProtocolError, NotConnectedError
 import curses
 import curses.textpad
 import ritz.textpad as utf8textpad
@@ -25,9 +25,24 @@ if loc  == (None, None) and os.environ["LC_CTYPE"] == "UTF-8":
     locale.setlocale(locale.LC_CTYPE, "en_US.UTF-8")
 # End UTF-8 Hotfix
 
+table_structure_no_id = "{selected:1} {opstate:11} {admstate:8} {age:9} {downtime:3} {router:16} {port:14} {description}"
+table_structure_id = "{selected:1}{id:5} {opstate:11} {admstate:8} {age:9} {downtime:3} {router:16} {port:14} {description}"
+table_structure = table_structure_no_id
+
+cases = {}
+visible_cases = []
+cases_selected = []
+
+screen_size = None
+lb = None
+session = None
+notifier = None
+casefilter = None
+
 log = logging.getLogger("cuRitz")
 
 def updateStatus(screen, text):
+    global screen_size
     screen.addnstr(0, screen_size.length-16, "{:<16}".format(text[:16]), 100)
     screen.noutrefresh()
     screen.refresh()
@@ -51,17 +66,16 @@ def interfaceRenamer(s):
 def uiShowLogWindow(screen, heading, lines):
     (screen_y, screen_x) = screen.getmaxyx()
 
-    center_x = screen_x // 2
-    if center_x < 40:
-        center_x = 40
     if screen_y < 30:
-        box_h = screen_y - 8
+        box_h = screen_y - 10
     else:
         box_h = 30
     box = listbox(box_h,
-                  80,
-                  3,
-                  center_x - 40)
+                  screen_x,
+                  4,
+                  0,
+                  current_selected_arrow=">" if args.arrow else "",
+                  lr_border=False)
 
     # Display box on the midle of screen
     box.heading = heading
@@ -202,12 +216,13 @@ def uiShowHistory(screen, caseid):
 
 def uiShowLog(screen, caseid):
     global cases
+    screen_x = screen.getmaxyx()[1]
+
     lines = []
     updateStatus(screen, "Waiting...")
     for line in cases[caseid].log:
-        lines.append("{}".format(line["date"]))
-        for l in textwrap.wrap(line["header"], 76, break_long_words=False):
-            lines.append("  {}".format(l))
+        for l in textwrap.wrap("{} {}".format(line["date"], line["header"]), screen_x-4, break_long_words=False):
+            lines.append("{}".format(l))
     updateStatus(screen, "")
     uiShowLogWindow(screen, "System Log Case {} - {}".format(caseid, cases[caseid].get("descr", "")), lines)
 
@@ -265,17 +280,17 @@ def main(screen):
         pass
     screen_size = BoxSize(*screen.getmaxyx())
     if args.kiosk:
-        lb = listbox(screen_size.height - 1, screen_size.length, 1, 0)
+        lb = listbox(screen_size.height - 1, screen_size.length, 1, 0, current_selected_arrow=">" if args.arrow else "")
     else:
-        lb = listbox(screen_size.height - 4, screen_size.length, 1, 0)
+        lb = listbox(screen_size.height - 4, screen_size.length, 1, 0, current_selected_arrow=">" if args.arrow else "")
 
     screen.clear()
     screen.refresh()
 
-    table_structure = "{selected:1} {opstate:11} {admstate:8} {age:9} {downtime:3} {router:16} {port:14} {description}"
+    
 
     with ritz(c_server, username=c_user, password=c_secret) as session:
-        with notifier(session) as notifier:
+        with ritz_notifier(session) as notifier:
             try:
                 runner(screen)
             except KeyboardInterrupt:
@@ -314,6 +329,7 @@ def create_case_list():
 
     lb.clear()
     lb.heading = table_structure.format(
+        id="  ID",
         selected="S",
         opstate="OpState",
         admstate="AdmState",
@@ -328,6 +344,7 @@ def create_case_list():
             try:
                 age = datetime.datetime.now() - case.opened
                 common = {}
+                common['id'] = case.id
                 common['selected'] = "*" if case.id in cases_selected else " "
                 common['router'] = case.router
                 common['admstate'] = case.state.value[:7]
@@ -358,8 +375,6 @@ def create_case_list():
                         color = cRed
                     elif case.portstate in ['down', 'lowerLayerDown'] and case.state in [caseState.WORKING, caseState.WAITING]:
                         color = cYellow
-                    if "downtime" in case.keys():
-                        downtime = downtimeShortner(case.downtime) 
                     lb.add(BoxElement(case.id,
                                       table_structure.format(
                                           **common,
@@ -440,7 +455,7 @@ def create_case_list():
                 else:
                   log.error("Unable to create table for case {}".format(case.id))
                   log.error(repr(case._attrs))
-            except Exception as e:
+            except Exception:
                 log.exception("Exception while createing table entry for case {}".format(case.id))
                 log.fatal(repr(case._attrs))
                 raise
@@ -448,11 +463,11 @@ def create_case_list():
 def doKeepalive():
     try:
         session.case(0)
-    except ProtocolError as E:
+    except ProtocolError:
         pass
 
 def runner(screen):
-    global cases, cases_selected, screen_size
+    global cases, cases_selected, screen_size, table_structure
     # Get all data for the first time
     cases = {}
     cases_selected = []
@@ -460,7 +475,10 @@ def runner(screen):
     draw(screen)
     caselist = session.get_caseids()
     for c in caselist:
-        case = session.case(c)
+        try:
+            case = session.case(c)
+        except:
+            continue
         cases[case.id] = case
         elements = int((len(cases) / len(caselist)) * 20)
         screen.addstr(9, 10,
@@ -538,8 +556,15 @@ def runner(screen):
 
         elif x == ord('f'):
             # Change Filter
-            if uiSimpleFilterWindow(screen):
-                update_ui = 999
+            uiSimpleFilterWindow(screen)
+            update_ui = 999
+            lb.active_element = 0
+
+        elif x == ord('m'):
+            # Clear flapping
+            for c in cases_selected:
+                case[cases_selected].clear_flapping()
+
 
         elif x == ord('x'):
             update_ui = 999
@@ -571,6 +596,14 @@ def runner(screen):
             else:
                 uiUpdateCases(screen, [lb.active.id])
                 uiSetState(screen, [lb.active.id])
+        
+        elif x == ord('i'):
+            update_ui = 999
+            # Update selected cases
+            if "{id" in table_structure:
+                table_structure = table_structure_no_id
+            else:
+                table_structure = table_structure_id
 
         elif x == ord('s'):
             update_ui = 999
@@ -590,6 +623,9 @@ def runner(screen):
                 cases.pop(id, None)
                 if id in cases_selected:
                     cases_selected.remove(id)
+            if lb.active_element >= len(lb) - 2:
+                lb.active_element = len(lb) - 2
+
 
         elif x == ord('1'):
             update_ui = 999
@@ -626,9 +662,11 @@ def runner(screen):
         
 
 def draw(screen):
+
+    screen_size = BoxSize(*screen.getmaxyx())
     screen.erase()
     screen.addstr(0, 0, "cuRitz version {}  -  {}".format(__version__, c_server), curses.A_BOLD)
-    screen.addstr(screen_size.height - 3, 0, "<=>=Display attributes"[:screen_size.length - 1])
+    screen.addstr(screen_size.height - 3, 0, "<=>=Display attributes  m=Clear Flapping   i=Show/Hide ID"[:screen_size.length - 1])
     screen.addstr(screen_size.height - 2, 0, "s=Set State   u=Update History    U=Update History and Set State    f=Filter   y=Remove Closed"[:screen_size.length - 1])
     screen.addstr(screen_size.height - 1, 0, "<ENTER>=Show history  <UP/DOWN>=Navigate q=Quit  l=Show Logs   x=(de)select  c=Clear selection"[:screen_size.length - 1])
     screen.noutrefresh()
@@ -658,7 +696,7 @@ def uiSetState(screen, caseids):
 
 def uiSetStateWindow(screen, number):
     try:
-        box = listbox(9, 62, 4, 9)
+        box = listbox(9, 62, 4, 9, current_selected_arrow=">" if args.arrow else "")
         box.heading = "Set state on {} cases".format(number)
         box.add("DON'T CHANGE")
         box.add("Open")
@@ -715,8 +753,10 @@ def uiSetStateWindow(screen, number):
 
 def uiUpdateCaseWindow(screen, number):
     global USE_UTF8
-    border = curses.newwin(9, 62, 4, 9)
-    textbox = curses.newwin(5, 60, 6, 10)
+    (screen_y, screen_x) = screen.getmaxyx()
+
+    border = curses.newwin(9, screen_x, 4, 0)
+    textbox = curses.newwin(5, screen_x-2, 6, 1)
     border.box()
     border.addstr(0, 1, "Add new history line")
     border.addstr(8, 1, "Ctrl+C to Abort    Ctrl+G to send    Ctrl+H = Backspace")
@@ -776,7 +816,7 @@ def uiSimpleFilterWindow(screen):
 
 
 def poll():
-    global cases, cases_selected
+    global cases, cases_selected, notifier
     update = notifier.poll()
     if update:
         log.debug("Updating case: {}  {}".format(update.id, update.info))
@@ -832,6 +872,8 @@ if __name__ == "__main__":
                         help='Hides all keybinding fields')
     parser.add_argument('--autoremove', action='store_true',
                         help='Automatically remove closed cases')
+    parser.add_argument('--arrow', action='store_true',
+                        help="Use arrow for current element marker")
     args = parser.parse_args()
 
     if args.ascii and args.utf8:
