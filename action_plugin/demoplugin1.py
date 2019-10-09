@@ -3,7 +3,7 @@ import curses
 from culistbox import listbox, BoxSize, BoxElement
 
 
-class testplugin1():
+class demoplugin1():
     def __init__(self):
         self.description = "Demoplugin"
 
