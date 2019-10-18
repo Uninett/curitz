@@ -298,7 +298,7 @@ def main(screen):
 
 def sortCases(casedict, field="lasttrans", filter=""):
     cases_sorted = []
-    for key in sorted(cases, key=lambda k: cases[k]._attrs[field]):
+    for key in sorted(cases, key=lambda k: (0 if cases[k].get("state") == caseState.IGNORED else 1, cases[k]._attrs[field])):
         show = False
         if "type" in cases[key]._attrs:
             if re.match(".*{}".format(filter), str(cases[key].get("type")), re.IGNORECASE):
