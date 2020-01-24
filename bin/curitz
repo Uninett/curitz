@@ -638,8 +638,10 @@ def runner(screen):
                 cases.pop(id, None)
                 if id in cases_selected:
                     cases_selected.remove(id)
-            if lb.active_element >= len(lb) - 2:
-                lb.active_element = len(lb) - 2
+            if lb.active_element >= len(visible_cases):
+                # If the current active element is beyond the item list end
+                # then move it to the last visible element
+                lb.active_element = len(visible_cases)-1
 
 
         elif x == ord('1'):
