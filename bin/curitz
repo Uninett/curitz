@@ -43,11 +43,15 @@ casefilter = None
 log = logging.getLogger("cuRitz")
 
 def updateStatus(screen, text):
-    global screen_size
-    screen.addnstr(0, screen_size.length-16, "{:<16}".format(text[:16]), 100)
-    screen.noutrefresh()
-    screen.refresh()
-    curses.doupdate()
+    try:
+        global screen_size
+        screen.addnstr(0, screen_size.length-16, "{:<16}".format(text[:16]), 100)
+        screen.noutrefresh()
+        screen.refresh()
+        curses.doupdate()
+    except curses.error:
+        # This matches when the display size is quite small 
+        pass
 
 
 def interfaceRenamer(s):
