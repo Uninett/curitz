@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from ritz import ritz, parse_config, notifier as ritz_notifier, caseType, caseState, __version__, ProtocolError, NotConnectedError
+from ritz import timed_cache, ritz, parse_config, notifier as ritz_notifier, caseType, caseState, __version__, ProtocolError, NotConnectedError
 import curses
 import curses.textpad
 import ritz.textpad as utf8textpad
@@ -41,6 +41,25 @@ notifier = None
 casefilter = None
 
 log = logging.getLogger("cuRitz")
+
+# Try to import DNSpython
+try:
+  import dns.resolver
+  import dns.reversename
+  resolver = dns.resolver.Resolver()
+  resolver.lifetime = 1
+  resolver.timeout = 1
+except ImportError as E:
+  log.error("Failed to load DNSPython {}".format(E))
+
+
+
+@timed_cache(minutes=60)
+def dns_reverse_resolver(address):
+    try:
+        return str(resolver.query(dns.reversename.from_address(str(address)),"PTR")[0])
+    except Exception as E:
+        return str(address)
 
 def updateStatus(screen, text):
     try:
@@ -401,7 +420,7 @@ def create_case_list():
                                           **common,
                                           opstate="BGP  %s" % case.bgpos[0:5],
                                           port="AS{}".format(case.remote_as),
-                                          description="%s %s" % (str(case.remote_addr_host), case.get("lastevent", "")),
+                                          description="%s %s" % (dns_reverse_resolver(str(case.remote_addr)), case.get("lastevent", "")),
                                       ), color))
                 elif case.type == caseType.BFD:
                     if case.state in [caseState.IGNORED]:
