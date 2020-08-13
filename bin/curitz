@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
-from ritz import timed_cache, ritz, parse_config, notifier as ritz_notifier, caseType, caseState, __version__, ProtocolError, NotConnectedError
+from ritz import (timed_cache,
+                  ritz,
+                  parse_config,
+                  notifier as ritz_notifier,
+                  caseType,
+                  caseState,
+                  __version__,
+                  ProtocolError,
+                  NotConnectedError,
+                  Case)
 import curses
 import curses.textpad
 import ritz.textpad as utf8textpad
@@ -25,8 +34,22 @@ if loc  == (None, None) and os.environ["LC_CTYPE"] == "UTF-8":
     locale.setlocale(locale.LC_CTYPE, "en_US.UTF-8")
 # End UTF-8 Hotfix
 
-table_structure_no_id = "{selected:1} {opstate:11} {admstate:8} {age:9} {downtime:3} {router:16} {port:14} {description}"
-table_structure_id = "{selected:1}{id:5} {opstate:11} {admstate:8} {age:9} {downtime:3} {router:16} {port:14} {description}"
+table_structure_no_id = "{selected:1} " \
+                        "{opstate:11} " \
+                        "{admstate:8} " \
+                        "{age:9} " \
+                        "{downtime:3} " \
+                        "{router:16} " \
+                        "{port:14} " \
+                        "{description}"
+table_structure_id = "{selected:1}{id:5} " \
+                     "{opstate:11} " \
+                     "{admstate:8} " \
+                     "{age:9} " \
+                     "{downtime:3} " \
+                     "{router:16} "\
+                     "{port:14} " \
+                     "{description}"
 table_structure = table_structure_no_id
 
 cases = {}
@@ -44,22 +67,22 @@ log = logging.getLogger("cuRitz")
 
 # Try to import DNSpython
 try:
-  import dns.resolver
-  import dns.reversename
-  resolver = dns.resolver.Resolver()
-  resolver.lifetime = 1
-  resolver.timeout = 1
+    import dns.resolver
+    import dns.reversename
+    resolver = dns.resolver.Resolver()
+    resolver.lifetime = 1
+    resolver.timeout = 1
 except ImportError as E:
-  log.error("Failed to load DNSPython {}".format(E))
-
+    log.error("Failed to load DNSPython {}".format(E))
 
 
 @timed_cache(minutes=60)
 def dns_reverse_resolver(address):
     try:
-        return str(resolver.query(dns.reversename.from_address(str(address)),"PTR")[0])
-    except Exception as E:
+        return str(resolver.query(dns.reversename.from_address(str(address)), "PTR")[0])
+    except Exception:
         return str(address)
+
 
 def updateStatus(screen, text):
     try:
@@ -69,7 +92,7 @@ def updateStatus(screen, text):
         screen.refresh()
         curses.doupdate()
     except curses.error:
-        # This matches when the display size is quite small 
+        # This matches when the display size is quite small
         pass
 
 
@@ -104,8 +127,8 @@ def uiShowLogWindow(screen, heading, lines):
     # Display box on the midle of screen
     box.heading = heading
     box.clear()
-    for l in lines:
-        box.add(l)
+    for _line in lines:
+        box.add(_line)
 
     box.draw()
     screen.noutrefresh()
@@ -144,6 +167,7 @@ def uiShowLogWindow(screen, heading, lines):
         screen.noutrefresh()
         curses.doupdate()
 
+
 def plugin_loader(plugin_name, filename):
     """Loads a plugin class from a external file"""
     try:
@@ -156,7 +180,6 @@ def plugin_loader(plugin_name, filename):
     except Exception:
         log.error(traceback.format_exc())
         return None
-
 
 
 def import_plugins(dir):
@@ -189,7 +212,7 @@ def actionPlugin(screen, caseid):
         for k in pkeys:
             box.add(plugins[k].description or "UNKNOWN PLUGIN")
         box.heading = "Select plugin"
-        
+
         box.draw()
         screen.noutrefresh()
         curses.doupdate()
@@ -217,11 +240,11 @@ def actionPlugin(screen, caseid):
                 try:
                     plugins[pkeys[box.active_element]].action(screen, cases[caseid])
                     return
-                except Exception as E:
+                except Exception:
                     log.error("traceback while executing actionplugin:")
                     log.error(traceback.format_exc())
                     return
-                    
+
             elif x == 27 or x == ord('q') or x == ord('Q'):  # ESC and Q
                 raise KeyboardInterrupt("ESC pressed")
 
@@ -237,11 +260,12 @@ def uiShowHistory(screen, caseid):
     updateStatus(screen, "Waiting...")
     for line in cases[caseid].history:
         lines.append("{} {}".format(line["date"], line["header"]))
-        for l in line["log"]:
-            for wrapped_line in textwrap.wrap(l, 76, break_long_words=False):
+        for _line in line["log"]:
+            for wrapped_line in textwrap.wrap(_line, 76, break_long_words=False):
                 lines.append("  {}".format(wrapped_line))
     updateStatus(screen, "")
     uiShowLogWindow(screen, "History Case {} - {}".format(caseid, cases[caseid].get("descr", "")), lines)
+
 
 def uiShowLog(screen, caseid):
     global cases
@@ -250,10 +274,11 @@ def uiShowLog(screen, caseid):
     lines = []
     updateStatus(screen, "Waiting...")
     for line in cases[caseid].log:
-        for l in textwrap.wrap("{} {}".format(line["date"], line["header"]), screen_x-4, break_long_words=False):
-            lines.append("{}".format(l))
+        for _line in textwrap.wrap("{} {}".format(line["date"], line["header"]), screen_x-4, break_long_words=False):
+            lines.append("{}".format(_line))
     updateStatus(screen, "")
     uiShowLogWindow(screen, "System Log Case {} - {}".format(caseid, cases[caseid].get("descr", "")), lines)
+
 
 def uiShowAttr(screen, caseid):
     global cases
@@ -273,16 +298,18 @@ def strfdelta(tdelta, fmt):
     d["minutes"], d["seconds"] = divmod(rem, 60)
     return fmt.format(**d)
 
+
 def downtimeShortner(td):
     log.debug(td)
     if td.days > 0:
         return "{:2d}d".format(td.days)
-    if td.seconds<60:
+    if td.seconds < 60:
         return "{:2d}s".format(td.seconds)
-    if td.seconds/60<60:
+    if td.seconds / 60 < 60:
         return "{:2.0f}m".format(td.seconds/60)
-    if td.seconds/60/60<60:
+    if td.seconds / 60 / 60 < 60:
         return "{:2.0f}h".format(td.seconds/60/60)
+
 
 def main(screen):
     global lb, session, notifier, cases, table_structure, screen_size, casefilter
@@ -316,8 +343,6 @@ def main(screen):
     screen.clear()
     screen.refresh()
 
-    
-
     with ritz(c_server, username=c_user, password=c_secret) as session:
         with ritz_notifier(session) as notifier:
             try:
@@ -325,9 +350,11 @@ def main(screen):
             except KeyboardInterrupt:
                 pass
 
+
 def sortCases(casedict, field="lasttrans", filter=""):
     cases_sorted = []
-    for key in sorted(cases, key=lambda k: (0 if cases[k].get("state") == caseState.IGNORED else 1, cases[k]._attrs[field])):
+    for key in sorted(cases, key=lambda k: (0 if cases[k].get("state") == caseState.IGNORED
+                                            else 1, cases[k]._attrs[field])):
         show = False
         if "type" in cases[key]._attrs:
             if re.match(".*{}".format(filter), str(cases[key].get("type")), re.IGNORECASE):
@@ -402,7 +429,8 @@ def create_case_list():
                         color = cGreen
                     elif case.portstate in ['down', 'lowerLayerDown'] and case.state == caseState.OPEN:
                         color = cRed
-                    elif case.portstate in ['down', 'lowerLayerDown'] and case.state in [caseState.WORKING, caseState.WAITING]:
+                    elif case.portstate in ['down', 'lowerLayerDown'] and case.state in [caseState.WORKING,
+                                                                                         caseState.WAITING]:
                         color = cYellow
                     lb.add(BoxElement(case.id,
                                       table_structure.format(
@@ -425,7 +453,8 @@ def create_case_list():
                                           **common,
                                           opstate="BGP  %s" % case.bgpos[0:5],
                                           port="AS{}".format(case.remote_as),
-                                          description="%s %s" % (dns_reverse_resolver(str(case.remote_addr)), case.get("lastevent", "")),
+                                          description="%s %s" % (dns_reverse_resolver(str(case.remote_addr)),
+                                                                 case.get("lastevent", "")),
                                       ), color))
                 elif case.type == caseType.BFD:
                     if case.state in [caseState.IGNORED]:
@@ -482,18 +511,20 @@ def create_case_list():
                                           description=case.lastevent,
                                       ), color))
                 else:
-                  log.error("Unable to create table for case {}".format(case.id))
-                  log.error(repr(case._attrs))
+                    log.error("Unable to create table for case {}".format(case.id))
+                    log.error(repr(case._attrs))
             except Exception:
                 log.exception("Exception while createing table entry for case {}".format(case.id))
                 log.fatal(repr(case._attrs))
                 raise
+
 
 def doKeepalive():
     try:
         session.case(0)
     except ProtocolError:
         pass
+
 
 def runner(screen):
     global cases, cases_selected, screen_size, table_structure
@@ -506,7 +537,7 @@ def runner(screen):
     for c in caselist:
         try:
             case = session.case(c)
-        except:
+        except Exception:
             continue
         cases[case.id] = case
         elements = int((len(cases) / len(caselist)) * 20)
@@ -540,7 +571,6 @@ def runner(screen):
             else:
                 lb.resize(screen_size.height - 4, screen_size.length)
             updateStatus(screen, 'refreshed')
-
 
         while poll():
             update_ui = 999
@@ -595,7 +625,6 @@ def runner(screen):
             for c in cases_selected:
                 case[cases_selected].clear_flapping()
 
-
         elif x == ord('x'):
             update_ui = 999
             selection_time = time.time()
@@ -639,7 +668,7 @@ def runner(screen):
             else:
                 uiUpdateCases(screen, [lb.active.id])
                 uiSetState(screen, [lb.active.id])
-        
+
         elif x == ord('i'):
             update_ui = 999
             # Update selected cases
@@ -670,7 +699,6 @@ def runner(screen):
                 # If the current active element is beyond the item list end
                 # then move it to the last visible element
                 lb.active_element = len(visible_cases)-1
-
 
         elif x == ord('1'):
             update_ui = 999
@@ -711,20 +739,19 @@ def runner(screen):
             updateStatus(screen, "Sending keepalive")
             doKeepalive()
             updateStatus(screen, "")
-        
+
 
 def draw(screen):
 
     screen_size = BoxSize(*screen.getmaxyx())
     screen.erase()
     screen.addstr(0, 0, "cuRitz version {}  -  {}".format(__version__, c_server), curses.A_BOLD)
-    screen.addstr(screen_size.height - 3, 0, "<=>=Display attributes  m=Clear Flapping   i=Show/Hide ID   X=Restore last selection"[:screen_size.length - 1])
-    screen.addstr(screen_size.height - 2, 0, "s=Set State   u=Update History    U=Update History and Set State    f=Filter   y=Remove Closed"[:screen_size.length - 1])
-    screen.addstr(screen_size.height - 1, 0, "<ENTER>=Show history  <UP/DOWN>=Navigate q=Quit  l=Show Logs   x=(de)select  c=Clear selection"[:screen_size.length - 1])
+    screen.addstr(screen_size.height - 3, 0, "<=>=Display attributes  m=Clear Flapping   i=Show/Hide ID   X=Restore last selection"[:screen_size.length - 1]) # noqa
+    screen.addstr(screen_size.height - 2, 0, "s=Set State   u=Update History    U=Update History and Set State    f=Filter   y=Remove Closed"[:screen_size.length - 1]) # noqa
+    screen.addstr(screen_size.height - 1, 0, "<ENTER>=Show history  <UP/DOWN>=Navigate q=Quit  l=Show Logs   x=(de)select  c=Clear selection"[:screen_size.length - 1]) # noqa
     screen.noutrefresh()
     lb.draw()
     curses.doupdate()
-
 
 
 def uiUpdateCases(screen, caseids):
@@ -840,7 +867,7 @@ def uiSimpleFilterWindow(screen):
     global casefilter
     border = curses.newwin(9, 62, 4, 9)
     textbox = curses.newwin(1, 60, 6, 10)
-    textbox.addstr(0,0, casefilter)
+    textbox.addstr(0, 0, casefilter)
     border.box()
     border.addstr(0, 1, "Really Simple Filter Generator")
     border.addstr(8, 1, "Ctrl+C to Abort    [ENTER] OK    Ctrl+H = Backspace")
@@ -932,12 +959,11 @@ if __name__ == "__main__":
     if args.ascii and args.utf8:
         sys.exit('ASCII encoding and UTF-8 encoding can\'t be enabled at the same time')
     elif args.ascii:
-        USE_UTF8=False
+        USE_UTF8 = False
     elif args.utf8 or locale.getpreferredencoding() == "UTF-8":
-        USE_UTF8=True
+        USE_UTF8 = True
     else:
-        USE_UTF8=False
-
+        USE_UTF8 = False
 
     try:
         if args.config:
@@ -949,8 +975,8 @@ if __name__ == "__main__":
         sys.exit("{}".format(E))
 
     if args.debug:
-      log.setLevel(logging.DEBUG)
-      log.addHandler(logging.FileHandler('curitz.log'))
+        log.setLevel(logging.DEBUG)
+        log.addHandler(logging.FileHandler('curitz.log'))
 
     if args.profile:
         if args.profile not in conf.keys():
@@ -972,8 +998,6 @@ if __name__ == "__main__":
         curses.wrapper(main)
     except TimeoutError:
         sys.exit("Connection lost with the zino server...")
-        
+
     except NotConnectedError as E:
         sys.exit("Unable to contact Zino: {}".format(E))
-
-
