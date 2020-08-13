@@ -209,11 +209,16 @@ def actionPlugin(screen, caseid):
                     box.active_element += 1
 
             elif x == curses.KEY_ENTER or x == 13 or x == 10:
+                if not pkeys:
+                    log.debug('No plugin in list, exiting plugin manager')
+                    return
+                log.debug(pkeys)
+                log.debug(box.active_element)
                 try:
                     plugins[pkeys[box.active_element]].action(screen, cases[caseid])
                     return
                 except Exception as E:
-                    log.error("traceback while executing actionplugin: {}".format(pkeys[box.active_element]))
+                    log.error("traceback while executing actionplugin:")
                     log.error(traceback.format_exc())
                     return
                     
