@@ -343,7 +343,7 @@ def main(screen):
     screen.clear()
     screen.refresh()
 
-    with ritz(c_server, username=c_user, password=c_secret) as session:
+    with ritz(c_server, username=c_user, password=c_secret, timeout=30) as session:
         with ritz_notifier(session) as notifier:
             try:
                 runner(screen)
