@@ -1,19 +1,7 @@
 #!/usr/bin/env python3
-from ritz import (timed_cache,
-                  ritz,
-                  parse_config,
-                  notifier as ritz_notifier,
-                  caseType,
-                  caseState,
-                  __version__,
-                  ProtocolError,
-                  NotConnectedError,
-                  Case)
 import curses
 import curses.textpad
-import ritz.textpad as utf8textpad
 import logging
-from culistbox import listbox, BoxSize, BoxElement
 import datetime
 import argparse
 import sys
@@ -24,6 +12,20 @@ import locale
 import os
 import traceback
 import importlib
+
+from ritz import (timed_cache,
+                  ritz,
+                  parse_config,
+                  notifier as ritz_notifier,
+                  caseType,
+                  caseState,
+                  __version__,
+                  ProtocolError,
+                  NotConnectedError,
+                  Case)
+import ritz.textpad as utf8textpad
+from culistbox import listbox, BoxSize, BoxElement
+
 
 # Hotfix to fix OSX reporting only "UTF-8" on LC_CTYPE
 try:
@@ -311,7 +313,7 @@ def downtimeShortner(td):
         return "{:2.0f}h".format(td.seconds/60/60)
 
 
-def main(screen):
+def uiloop(screen):
     global lb, session, notifier, cases, table_structure, screen_size, casefilter
     casefilter = ""
 
@@ -948,7 +950,7 @@ def poll():
     return False
 
 
-if __name__ == "__main__":
+def parse_args():
     parser = argparse.ArgumentParser(description='Process some integers.')
     parser.add_argument('-p', '--profile', default='default',
                         help='use Zino profile')
@@ -960,26 +962,26 @@ if __name__ == "__main__":
                         help='Show client in black-n-white mode')
     parser.add_argument('--debug', action='store_true',
                         help='write debug logfile')
-    parser.add_argument('--utf8', action='store_true',
-                        help='Force usage of UTF8 encoding')
-    parser.add_argument('--ascii', action='store_true',
-                        help='Force usage of ASCII encoding')
     parser.add_argument('--kiosk', action='store_true',
                         help='Hides all keybinding fields')
     parser.add_argument('--autoremove', action='store_true',
                         help='Automatically remove closed cases')
     parser.add_argument('--arrow', action='store_true',
                         help="Use arrow for current element marker")
+    encoding_parser = parser.add_mutually_exclusive_group()
+    encoding_parser.add_argument('--utf8', action='store_true',
+                                 default=False,
+                                 help='Force usage of UTF8 encoding')
+    encoding_parser.add_argument('--ascii', action='store_false',
+                                 dest='utf8',
+                                 help='Force usage of ASCII encoding')
     args = parser.parse_args()
+    return args
 
-    if args.ascii and args.utf8:
-        sys.exit('ASCII encoding and UTF-8 encoding can\'t be enabled at the same time')
-    elif args.ascii:
-        USE_UTF8 = False
-    elif args.utf8 or locale.getpreferredencoding() == "UTF-8":
-        USE_UTF8 = True
-    else:
-        USE_UTF8 = False
+
+def main():
+    args = parse_args()
+    USE_UTF8 = args.utf8
 
     try:
         if args.config:
@@ -1011,9 +1013,13 @@ if __name__ == "__main__":
     c_user = conf[args.profile]["User"]
     c_secret = conf[args.profile]["Secret"]
     try:
-        curses.wrapper(main)
+        curses.wrapper(uiloop)
     except TimeoutError:
         sys.exit("Connection lost with the zino server...")
 
     except NotConnectedError as E:
         sys.exit("Unable to contact Zino: {}".format(E))
+
+
+if __name__ == "__main__":
+    main()
