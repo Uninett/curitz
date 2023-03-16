@@ -78,6 +78,12 @@ except ImportError as E:
     log.error("Failed to load DNSPython {}".format(E))
 
 
+class Config:
+
+    def __init__(self, dict_):
+        self.__dict__.update(dict_)
+
+
 @timed_cache(minutes=60)
 def dns_reverse_resolver(address):
     try:
@@ -313,7 +319,7 @@ def downtimeShortner(td):
         return "{:2.0f}h".format(td.seconds/60/60)
 
 
-def uiloop(screen):
+def uiloop(screen, config):
     global lb, session, notifier, cases, table_structure, screen_size, casefilter
     casefilter = ""
 
@@ -345,10 +351,10 @@ def uiloop(screen):
     screen.clear()
     screen.refresh()
 
-    with ritz(c_server, username=c_user, password=c_secret, timeout=30) as session:
+    with ritz(config.Server, username=config.User, password=config.Secret, timeout=30) as session:
         with ritz_notifier(session) as notifier:
             try:
-                runner(screen)
+                runner(screen, config)
             except KeyboardInterrupt:
                 pass
 
@@ -528,7 +534,7 @@ def doKeepalive():
         pass
 
 
-def runner(screen):
+def runner(screen, config):
     global cases, cases_selected, screen_size, table_structure
     # Get all data for the first time
     cases = {}
@@ -555,7 +561,7 @@ def runner(screen):
 
     create_case_list()
     lb.draw()
-    draw(screen)
+    draw(screen, config.Server)
 
     update_ui = time.time()
     keepalive = time.time()
@@ -624,7 +630,7 @@ def runner(screen):
 
         elif x == ord('f'):
             # Change Filter
-            uiSimpleFilterWindow(screen)
+            uiSimpleFilterWindow(screen, config.UTF8)
             update_ui = 999
             lb.active_element = 0
 
@@ -665,18 +671,18 @@ def runner(screen):
             update_ui = 999
             # Update selected cases
             if cases_selected:
-                uiUpdateCases(screen, cases_selected)
+                uiUpdateCases(screen, cases_selected, config.UTF8)
             else:
-                uiUpdateCases(screen, [lb.active.id])
+                uiUpdateCases(screen, [lb.active.id], config.UTF8)
 
         elif x == ord('U'):
             update_ui = 999
             # Update selected cases
             if cases_selected:
-                uiUpdateCases(screen, cases_selected)
+                uiUpdateCases(screen, cases_selected, config.UTF8)
                 uiSetState(screen, cases_selected)
             else:
-                uiUpdateCases(screen, [lb.active.id])
+                uiUpdateCases(screen, [lb.active.id], config.UTF8)
                 uiSetState(screen, [lb.active.id])
 
         elif x == ord('i'):
@@ -751,11 +757,11 @@ def runner(screen):
             updateStatus(screen, "")
 
 
-def draw(screen):
+def draw(screen, server):
 
     screen_size = BoxSize(*screen.getmaxyx())
     screen.erase()
-    screen.addstr(0, 0, "cuRitz version {}  -  {}".format(__version__, c_server), curses.A_BOLD)
+    screen.addstr(0, 0, "cuRitz version {}  -  {}".format(__version__, server), curses.A_BOLD)
     screen.addstr(screen_size.height - 3, 0, "<=>=Display attributes  m=Clear Flapping   i=Show/Hide ID   X=Restore last selection"[:screen_size.length - 1]) # noqa
     screen.addstr(screen_size.height - 2, 0, "s=Set Stats u=Update History U=Update History and Set State f=Filter y=Remove Closed p=poll"[:screen_size.length - 1]) # noqa
     screen.addstr(screen_size.height - 1, 0, "<ENTER>=Show history  <UP/DOWN>=Navigate q=Quit  l=Show Logs   x=(de)select  c=Clear selection"[:screen_size.length - 1]) # noqa
@@ -772,8 +778,8 @@ def uiCFlapCases(caseids):
        if cases[case].type == caseType.PORTSTATE:
            cases[case].clear_flapping()
 
-def uiUpdateCases(screen, caseids):
-    update = uiUpdateCaseWindow(screen, len(caseids))
+def uiUpdateCases(screen, caseids, utf8=False):
+    update = uiUpdateCaseWindow(screen, len(caseids), utf8)
     if update:
         for case in caseids:
             cases[case].add_history(update)
@@ -849,8 +855,7 @@ def uiSetStateWindow(screen, number):
     return ""
 
 
-def uiUpdateCaseWindow(screen, number):
-    global USE_UTF8
+def uiUpdateCaseWindow(screen, number, utf8=False):
     (screen_y, screen_x) = screen.getmaxyx()
 
     border = curses.newwin(9, screen_x, 4, 0)
@@ -860,7 +865,7 @@ def uiUpdateCaseWindow(screen, number):
     border.addstr(8, 1, "Ctrl+C to Abort    Ctrl+G to send    Ctrl+H = Backspace")
     border.addstr(1, 1, "{} case(s) selected for update".format(number))
     border.refresh()
-    if USE_UTF8:
+    if utf8:
         p = utf8textpad.Textbox(textbox)
     else:
         p = curses.textpad.Textbox(textbox)
@@ -881,7 +886,7 @@ def uiUpdateCaseWindow(screen, number):
     return text
 
 
-def uiSimpleFilterWindow(screen):
+def uiSimpleFilterWindow(screen, utf8=False):
     global casefilter
     border = curses.newwin(9, 62, 4, 9)
     textbox = curses.newwin(1, 60, 6, 10)
@@ -890,7 +895,7 @@ def uiSimpleFilterWindow(screen):
     border.addstr(0, 1, "Really Simple Filter Generator")
     border.addstr(8, 1, "Ctrl+C to Abort    [ENTER] OK    Ctrl+H = Backspace")
     border.refresh()
-    if USE_UTF8:
+    if utf8:
         p = utf8textpad.Textbox(textbox)
     else:
         p = curses.textpad.Textbox(textbox)
@@ -981,7 +986,6 @@ def parse_args():
 
 def main():
     args = parse_args()
-    USE_UTF8 = args.utf8
 
     try:
         if args.config:
@@ -1009,11 +1013,10 @@ def main():
             print("  {}".format(profile))
         sys.exit(0)
 
-    c_server = conf[args.profile]["Server"]
-    c_user = conf[args.profile]["User"]
-    c_secret = conf[args.profile]["Secret"]
+    config = Config(args.profile)
+    config.UTF8 = args.utf8
     try:
-        curses.wrapper(uiloop)
+        curses.wrapper(uiloop, config)
     except TimeoutError:
         sys.exit("Connection lost with the zino server...")
 
