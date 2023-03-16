@@ -15,7 +15,7 @@ import importlib
 
 from ritz import (timed_cache,
                   ritz,
-                  parse_config,
+                  parse_tcl_config,
                   notifier as ritz_notifier,
                   caseType,
                   caseState,
@@ -985,9 +985,9 @@ def main():
 
     try:
         if args.config:
-            conf = parse_config(args.config)
+            conf = parse_tcl_config(args.config)
         else:
-            conf = parse_config("~/.ritz.tcl")
+            conf = parse_tcl_config("~/.ritz.tcl")
     except FileNotFoundError as E:
         sys.stderr.write("Unable to load configuration for curitz:\n")
         sys.exit("{}".format(E))
