@@ -1013,7 +1013,7 @@ def main():
             print("  {}".format(profile))
         sys.exit(0)
 
-    config = Config(args.profile)
+    config = Config(conf[args.profile])
     config.UTF8 = args.utf8
     try:
         curses.wrapper(uiloop, config)
