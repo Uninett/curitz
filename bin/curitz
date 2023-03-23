@@ -540,7 +540,7 @@ def runner(screen, config):
     cases = {}
     cases_selected = []
 
-    draw(screen)
+    draw(screen, config.Server)
     caselist = session.get_caseids()
     for c in caselist:
         try:
@@ -746,9 +746,9 @@ def runner(screen, config):
 
         if time.time() - update_ui > 10:
             update_ui = time.time()
-            create_case_list()
+            create_case_list(config)
             lb.draw()
-            draw(screen)
+            draw(screen, config.Server)
 
         if time.time() - keepalive > 60:
             keepalive = time.time()
@@ -795,7 +795,7 @@ def uiSetState(screen, caseids, config):
         cases_selected_last.clear()
         cases_selected_last.extend(cases_selected)
         cases_selected.clear()
-        create_case_list()
+        create_case_list(config)
 
 
 def uiSetStateWindow(screen, number, config):
