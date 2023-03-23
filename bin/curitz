@@ -118,7 +118,7 @@ def interfaceRenamer(s):
     return s
 
 
-def uiShowLogWindow(screen, heading, lines):
+def uiShowLogWindow(screen, heading, lines, config):
     (screen_y, screen_x) = screen.getmaxyx()
 
     if screen_y < 30:
@@ -129,7 +129,7 @@ def uiShowLogWindow(screen, heading, lines):
                   screen_x,
                   4,
                   0,
-                  current_selected_arrow=">" if args.arrow else "",
+                  current_selected_arrow=config.arrow,
                   lr_border=False)
 
     # Display box on the midle of screen
@@ -262,7 +262,7 @@ def actionPlugin(screen, caseid):
         box.clear()
 
 
-def uiShowHistory(screen, caseid):
+def uiShowHistory(screen, caseid, config):
     global cases
     lines = []
     updateStatus(screen, "Waiting...")
@@ -272,10 +272,10 @@ def uiShowHistory(screen, caseid):
             for wrapped_line in textwrap.wrap(_line, 76, break_long_words=False):
                 lines.append("  {}".format(wrapped_line))
     updateStatus(screen, "")
-    uiShowLogWindow(screen, "History Case {} - {}".format(caseid, cases[caseid].get("descr", "")), lines)
+    uiShowLogWindow(screen, "History Case {} - {}".format(caseid, cases[caseid].get("descr", "")), lines, config)
 
 
-def uiShowLog(screen, caseid):
+def uiShowLog(screen, caseid, config):
     global cases
     screen_x = screen.getmaxyx()[1]
 
@@ -285,16 +285,16 @@ def uiShowLog(screen, caseid):
         for _line in textwrap.wrap("{} {}".format(line["date"], line["header"]), screen_x-4, break_long_words=False):
             lines.append("{}".format(_line))
     updateStatus(screen, "")
-    uiShowLogWindow(screen, "System Log Case {} - {}".format(caseid, cases[caseid].get("descr", "")), lines)
+    uiShowLogWindow(screen, "System Log Case {} - {}".format(caseid, cases[caseid].get("descr", "")), lines, config)
 
 
-def uiShowAttr(screen, caseid):
+def uiShowAttr(screen, caseid, config):
     global cases
     lines = []
     for line in cases[caseid].keys():
         lines.append("{:<15} : {:>}".format(line, repr(cases[caseid][line])))
 
-    uiShowLogWindow(screen, "Case {} - {}".format(caseid, cases[caseid].get("descr", "")), lines)
+    uiShowLogWindow(screen, "Case {} - {}".format(caseid, cases[caseid].get("descr", "")), lines, config)
 
 
 def strfdelta(tdelta, fmt):
@@ -343,10 +343,10 @@ def uiloop(screen, config):
     except Exception:
         pass
     screen_size = BoxSize(*screen.getmaxyx())
-    if args.kiosk:
-        lb = listbox(screen_size.height - 1, screen_size.length, 1, 0, current_selected_arrow=">" if args.arrow else "")
+    if config.kiosk:
+        lb = listbox(screen_size.height - 1, screen_size.length, 1, 0, current_selected_arrow=config.arrow)
     else:
-        lb = listbox(screen_size.height - 4, screen_size.length, 1, 0, current_selected_arrow=">" if args.arrow else "")
+        lb = listbox(screen_size.height - 4, screen_size.length, 1, 0, current_selected_arrow=config.arrow)
 
     screen.clear()
     screen.refresh()
@@ -386,7 +386,7 @@ def sortCases(casedict, field="lasttrans", filter=""):
     return reversed(cases_sorted)
 
 
-def create_case_list():
+def create_case_list(config):
     global cases, visible_cases, lb, cases_selected, casefilter
     visible_cases = cases.keys()
     sorted_cases = sortCases(cases, field="updated", filter=casefilter)
@@ -419,7 +419,7 @@ def create_case_list():
                 else:
                     common["downtime"] = ""
                 color = []
-                if args.nocolor:
+                if config.nocolor:
                     cRed = [curses.A_BOLD]
                     cYellow = []
                     cBlue = []
@@ -559,7 +559,7 @@ def runner(screen, config):
     screen.clear()
     screen.refresh()
 
-    create_case_list()
+    create_case_list(config)
     lb.draw()
     draw(screen, config.Server)
 
@@ -574,13 +574,13 @@ def runner(screen, config):
             # Screen is resized
             update_ui = 999
             screen_size = BoxSize(*screen.getmaxyx())
-            if args.kiosk:
+            if config.kiosk:
                 lb.resize(screen_size.height - 1, screen_size.length)
             else:
                 lb.resize(screen_size.height - 4, screen_size.length)
             updateStatus(screen, 'refreshed')
 
-        while poll():
+        while poll(config):
             update_ui = 999
             updateStatus(screen, "Polling")
 
@@ -680,10 +680,10 @@ def runner(screen, config):
             # Update selected cases
             if cases_selected:
                 uiUpdateCases(screen, cases_selected, config.UTF8)
-                uiSetState(screen, cases_selected)
+                uiSetState(screen, cases_selected, config)
             else:
                 uiUpdateCases(screen, [lb.active.id], config.UTF8)
-                uiSetState(screen, [lb.active.id])
+                uiSetState(screen, [lb.active.id], config)
 
         elif x == ord('i'):
             update_ui = 999
@@ -697,9 +697,9 @@ def runner(screen, config):
             update_ui = 999
             # Update selected cases
             if cases_selected:
-                uiSetState(screen, cases_selected)
+                uiSetState(screen, cases_selected, config)
             else:
-                uiSetState(screen, [lb.active.id])
+                uiSetState(screen, [lb.active.id], config)
 
         elif x == ord('y'):
             update_ui = 999
@@ -722,16 +722,16 @@ def runner(screen, config):
 
         elif x == ord("="):
             update_ui = 999
-            uiShowAttr(screen, lb.active.id)
+            uiShowAttr(screen, lb.active.id, config)
 
         elif x == curses.KEY_ENTER or x == 10 or x == 13:  # [ENTER], CR or LF
             update_ui = 999
-            uiShowHistory(screen, lb.active.id)
+            uiShowHistory(screen, lb.active.id, config)
 
         elif x == ord('l'):
             # [ENTER], CR or LF
             update_ui = 999
-            uiShowLog(screen, lb.active.id)
+            uiShowLog(screen, lb.active.id, config)
 
         elif x == 12:
             # CTRL + L
@@ -785,8 +785,8 @@ def uiUpdateCases(screen, caseids, utf8=False):
             cases[case].add_history(update)
 
 
-def uiSetState(screen, caseids):
-    new_state = uiSetStateWindow(screen, len(caseids))
+def uiSetState(screen, caseids, config):
+    new_state = uiSetStateWindow(screen, len(caseids), config)
     if new_state:
         for case in caseids:
             cases[case].set_state(new_state)
@@ -798,9 +798,9 @@ def uiSetState(screen, caseids):
         create_case_list()
 
 
-def uiSetStateWindow(screen, number):
+def uiSetStateWindow(screen, number, config):
     try:
-        box = listbox(9, 62, 4, 9, current_selected_arrow=">" if args.arrow else "")
+        box = listbox(9, 62, 4, 9, current_selected_arrow=config.arrow)
         box.heading = "Set state on {} cases".format(number)
         box.add("DON'T CHANGE")
         box.add("Open")
@@ -918,7 +918,7 @@ def uiSimpleFilterWindow(screen, utf8=False):
     return True
 
 
-def poll():
+def poll(config):
     global cases, cases_selected, notifier
     update = notifier.poll()
     if update:
@@ -930,7 +930,7 @@ def poll():
                 return
         if update.type == "state":
             states = update.info.split(" ")
-            if states[1] == "closed" and args.autoremove:
+            if states[1] == "closed" and config.autoremove:
                 log.debug("Automatically removing {} because of autoremove argument".format(update.id))
                 cases.pop(update.id, None)
                 log.debug("List after remove: {}".format(cases.keys()))
@@ -984,6 +984,16 @@ def parse_args():
     return args
 
 
+def build_config(conf, args):
+    config = Config(conf[args.profile])
+    config.UTF8 = args.utf8
+    bool_config_args = ("kiosk", "autoremove", "nocolor")
+    for arg in bool_config_args:
+        setattr(config, arg, getattr(args, arg, False))
+    config.arrow = ">" if args.arrow else ""
+    return config
+
+
 def main():
     args = parse_args()
 
@@ -1013,8 +1023,7 @@ def main():
             print("  {}".format(profile))
         sys.exit(0)
 
-    config = Config(conf[args.profile])
-    config.UTF8 = args.utf8
+    config = build_config(conf, args)
     try:
         curses.wrapper(uiloop, config)
     except TimeoutError:
