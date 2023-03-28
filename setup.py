@@ -17,7 +17,6 @@ setup(
     long_description=open('README.md').read(),
     include_package_data=True,
     scripts=['bin/curitz'],
-    py_modules=['culistbox'],
     extras_require = {
         'DNS':  ["dnspython"]
     },

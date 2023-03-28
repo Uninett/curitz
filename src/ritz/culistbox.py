@@ -4,9 +4,9 @@ import logging
 log = logging.getLogger("cuRitz")
 
 
-BoxSize = NamedTuple('boxSize', [('height', int),
+BoxSize = NamedTuple('BoxSize', [('height', int),
                                  ('length', int)])
-BoxElement = NamedTuple('boxElement', [('id', int),
+BoxElement = NamedTuple('BoxElement', [('id', int),
                                        ('text', str),
                                        ('font_args', List)])
 

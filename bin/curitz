@@ -24,7 +24,7 @@ from ritz import (timed_cache,
                   NotConnectedError,
                   Case)
 import ritz.textpad as utf8textpad
-from culistbox import listbox, BoxSize, BoxElement
+from ritz.culistbox import listbox, BoxSize, BoxElement
 
 
 # Hotfix to fix OSX reporting only "UTF-8" on LC_CTYPE

@@ -1,6 +1,6 @@
 import curses
 
-from culistbox import listbox, BoxSize, BoxElement
+from ritz.culistbox import listbox, BoxSize, BoxElement
 
 
 class demoplugin1():
