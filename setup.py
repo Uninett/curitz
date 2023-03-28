@@ -4,7 +4,7 @@ setup(
         'write_to': 'src/ritz/version.py',
     },
     setup_requires=['setuptools_scm'],
-    install_requires=[],
+    install_requires=['zinolib<0.10'],
     name='PyRitz',
     author='Runar Borge',
     author_email='runar.borge@uninett.no',
