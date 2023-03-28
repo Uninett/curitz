@@ -57,10 +57,10 @@ table_structure_id = "{selected:1}{id:5} " \
                      "{description}"
 table_structure = table_structure_no_id
 
-cases = {}
+cases = {}  # type: ignore
 visible_cases = []
 cases_selected = []
-cases_selected_last = []
+cases_selected_last = []  # type: ignore
 
 screen_size = None
 lb = None
