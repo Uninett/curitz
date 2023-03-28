@@ -1,4 +1,4 @@
-* PyRitz
+# PyRitz
 
 Python module to connect to zino data and notification channel
 
@@ -6,7 +6,7 @@ This module implements almost every functionality that Zino exports via the data
 
 
 
-** Testing
+## Testing
 This library is testable with unittests,
 When testing it starts a Zino emulator that reponds correctly to requests as the real server would do.
 
@@ -24,3 +24,8 @@ To test on a specific python other than current, run:
 ```tox -e py{version}```
 
 where `version` is of the form "311" for Python 3.11.
+
+## Development
+
+Some minimal pre-commit hooks are included, install by running `pre-commit
+install`.
