@@ -27,6 +27,9 @@ import curitz.textpad as utf8textpad
 from curitz.culistbox import listbox, BoxSize, BoxElement
 
 
+DEFAULT_PROFILE = 'default'
+
+
 # Hotfix to fix OSX reporting only "UTF-8" on LC_CTYPE
 try:
     loc = locale.getlocale()
@@ -80,8 +83,10 @@ except ImportError as E:
 
 class Config:
 
-    def __init__(self, dict_):
-        self.__dict__.update(dict_)
+    def __init__(self, dict_=None, **kwargs):
+        if dict_:
+            self.__dict__.update(dict_)
+        self.__dict__.update(kwargs)
 
 
 @timed_cache(minutes=60)
@@ -955,9 +960,9 @@ def poll(config):
     return False
 
 
-def parse_args():
+def parse_args(args_list=None):
     parser = argparse.ArgumentParser(description='Process some integers.')
-    parser.add_argument('-p', '--profile', default='default',
+    parser.add_argument('-p', '--profile', default=DEFAULT_PROFILE,
                         help='use Zino profile')
     parser.add_argument('--profiles', action='store_true',
                         help='List Zino profiles')
@@ -980,17 +985,18 @@ def parse_args():
     encoding_parser.add_argument('--ascii', action='store_false',
                                  dest='utf8',
                                  help='Force usage of ASCII encoding')
-    args = parser.parse_args()
+    args = parser.parse_args(args_list)
     return args
 
 
 def build_config(conf, args):
-    config = Config(conf[args.profile])
-    config.UTF8 = args.utf8
+    profile = getattr(args, 'profile', DEFAULT_PROFILE)
+    config = Config(conf.get(profile, {}))
+    config.UTF8 = getattr(args, 'utf8', False)
     bool_config_args = ("kiosk", "autoremove", "nocolor")
     for arg in bool_config_args:
         setattr(config, arg, getattr(args, arg, False))
-    config.arrow = ">" if args.arrow else ""
+    config.arrow = ">" if getattr(args, 'arrow', False) else ""
     return config
 
 
