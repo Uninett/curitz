@@ -18,6 +18,7 @@ setup(
     include_package_data=True,
     entry_points={'console_scripts': ['curitz = curitz:main']},
     extras_require = {
-        'DNS':  ["dnspython"]
+        'DNS':  ["dnspython"],
+        'test': ["tox"],
     },
 )
