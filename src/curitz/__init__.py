@@ -1,8 +1,8 @@
 import sys
 
-from .ritz import ritz, notifier, parse_tcl_config
-from .ritz import caseState, caseType, Case
-from .ritz import AuthenticationError, NotConnectedError, ProtocolError
+from zinolib.ritz import ritz, notifier, parse_tcl_config
+from zinolib.ritz import caseState, caseType, Case
+from zinolib.ritz import AuthenticationError, NotConnectedError, ProtocolError
 from .timed_cache import timed_cache
 
 
@@ -11,7 +11,7 @@ try:
 except ImportError:
     # calculate version
     # we cannot use importlib_metadata because Ubuntu bionic
-    package_name = "PyRitz"
+    package_name = "curitz"
     __version__ = 'master'  # fallback
     try:
         from importlib.metadata import version, PackageNotFoundError

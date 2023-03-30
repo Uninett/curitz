@@ -1,6 +1,6 @@
 import curses
 
-from culistbox import listbox, BoxSize, BoxElement
+from curitz.culistbox import listbox, BoxSize, BoxElement
 
 
 class demoplugin1():
@@ -13,7 +13,7 @@ class demoplugin1():
             box = listbox(9, 100, 4, 9)
             box.add(case.__repr__())
             box.heading = "Nizebox :)"
-            
+
             box.draw()
             screen.noutrefresh()
             curses.doupdate()

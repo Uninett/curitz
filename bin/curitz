@@ -13,7 +13,7 @@ import os
 import traceback
 import importlib
 
-from ritz import (timed_cache,
+from curitz import (timed_cache,
                   ritz,
                   parse_tcl_config,
                   notifier as ritz_notifier,
@@ -23,8 +23,8 @@ from ritz import (timed_cache,
                   ProtocolError,
                   NotConnectedError,
                   Case)
-import ritz.textpad as utf8textpad
-from culistbox import listbox, BoxSize, BoxElement
+import curitz.textpad as utf8textpad
+from curitz.culistbox import listbox, BoxSize, BoxElement
 
 
 # Hotfix to fix OSX reporting only "UTF-8" on LC_CTYPE

@@ -1,10 +1,6 @@
-# PyRitz
+# curitz
 
-Python module to connect to zino data and notification channel
-
-This module implements almost every functionality that Zino exports via the data and notification channel 
-
-
+Python curses package to interface with Zino.
 
 ## Testing
 This library is testable with unittests,
