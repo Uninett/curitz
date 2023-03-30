@@ -13,18 +13,14 @@ import os
 import traceback
 import importlib
 
-from curitz import (timed_cache,
-                  ritz,
-                  parse_tcl_config,
-                  notifier as ritz_notifier,
-                  caseType,
-                  caseState,
-                  __version__,
-                  ProtocolError,
-                  NotConnectedError,
-                  Case)
+from curitz import __version__
+from curitz.timed_cache import timed_cache
 import curitz.textpad as utf8textpad
 from curitz.culistbox import listbox, BoxSize, BoxElement
+from zinolib.ritz import (
+    ritz, parse_tcl_config, notifier as ritz_notifier, caseType, caseState, Case,
+    NotConnectedError, ProtocolError
+)
 
 
 DEFAULT_PROFILE = 'default'
