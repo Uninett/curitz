@@ -11,7 +11,7 @@ try:
 except ImportError:
     # calculate version
     # we cannot use importlib_metadata because Ubuntu bionic
-    package_name = "PyRitz"
+    package_name = "curitz"
     __version__ = 'master'  # fallback
     try:
         from importlib.metadata import version, PackageNotFoundError
