@@ -21,6 +21,21 @@ To test on a specific python other than current, run::
 
 where ``version`` is of the form "311" for Python 3.11.
 
+Install
+=======
+
+To use ``curitz`` we recommend installing it to your local user, for instance
+with ``pip`'s ``--user``-flag::
+
+    pip install --user .
+
+if installing from source or::
+
+    pip install --user curitz
+
+if installing from Pypi. This should normally put the binary and library under
+``.local`` on Linux.
+
 Development
 ===========
 
