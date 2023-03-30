@@ -26,3 +26,8 @@ Development
 
 Some minimal pre-commit hooks are included, install by running
 ``pre-commit install``.
+
+See the file `.git-blame-ignore-revs` for commits to ignore when running
+`git blame`. Use it like so::
+
+    git blame --ignore-revs-file .git-blame-ignore-revs FILE
