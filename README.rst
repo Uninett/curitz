@@ -4,6 +4,8 @@ curitz
 
 Python curses package to interface with Zino.
 
+Split from internal project PyRitz on 2023-03-30.
+
 Testing
 =======
 
