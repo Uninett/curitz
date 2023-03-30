@@ -36,7 +36,7 @@ test = [
 ]
 
 [project.scripts]
-curitz = "curitz:main"
+curitz = "curitz.cli:main"
 
 [tool.setuptools]
 include-package-data = false
