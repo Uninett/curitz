@@ -16,8 +16,9 @@ setup(
     description="Python curses interface to Zino",
     long_description=open('README.md').read(),
     include_package_data=True,
-    scripts=['bin/curitz'],
+    entry_points={'console_scripts': ['curitz = curitz:main']},
     extras_require = {
-        'DNS':  ["dnspython"]
+        'DNS':  ["dnspython"],
+        'test': ["tox"],
     },
 )
