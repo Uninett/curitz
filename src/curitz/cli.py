@@ -18,12 +18,17 @@ from curitz.timed_cache import timed_cache
 import curitz.textpad as utf8textpad
 from curitz.culistbox import listbox, BoxSize, BoxElement
 from zinolib.ritz import (
-    ritz, parse_tcl_config, notifier as ritz_notifier, caseType, caseState, Case,
-    NotConnectedError, ProtocolError
+    ritz,
+    parse_tcl_config,
+    notifier as ritz_notifier,
+    caseType,
+    caseState,
+    NotConnectedError,
+    ProtocolError,
 )
 
 
-DEFAULT_PROFILE = 'default'
+DEFAULT_PROFILE = "default"
 
 
 # Hotfix to fix OSX reporting only "UTF-8" on LC_CTYPE
@@ -31,26 +36,30 @@ try:
     loc = locale.getlocale()
 except ValueError:
     loc = None, None
-if loc  == (None, None) and os.environ["LC_CTYPE"] == "UTF-8":
+if loc == (None, None) and os.environ["LC_CTYPE"] == "UTF-8":
     locale.setlocale(locale.LC_CTYPE, "en_US.UTF-8")
 # End UTF-8 Hotfix
 
-table_structure_no_id = "{selected:1} " \
-                        "{opstate:11} " \
-                        "{admstate:8} " \
-                        "{age:9} " \
-                        "{downtime:3} " \
-                        "{router:16} " \
-                        "{port:14} " \
-                        "{description}"
-table_structure_id = "{selected:1}{id:5} " \
-                     "{opstate:11} " \
-                     "{admstate:8} " \
-                     "{age:9} " \
-                     "{downtime:3} " \
-                     "{router:16} "\
-                     "{port:14} " \
-                     "{description}"
+table_structure_no_id = (
+    "{selected:1} "
+    "{opstate:11} "
+    "{admstate:8} "
+    "{age:9} "
+    "{downtime:3} "
+    "{router:16} "
+    "{port:14} "
+    "{description}"
+)
+table_structure_id = (
+    "{selected:1}{id:5} "
+    "{opstate:11} "
+    "{admstate:8} "
+    "{age:9} "
+    "{downtime:3} "
+    "{router:16} "
+    "{port:14} "
+    "{description}"
+)
 table_structure = table_structure_no_id
 
 cases = {}  # type: ignore
@@ -70,6 +79,7 @@ log = logging.getLogger("cuRitz")
 try:
     import dns.resolver
     import dns.reversename
+
     resolver = dns.resolver.Resolver()
     resolver.lifetime = 1
     resolver.timeout = 1
@@ -78,7 +88,6 @@ except ImportError as E:
 
 
 class Config:
-
     def __init__(self, dict_=None, **kwargs):
         if dict_:
             self.__dict__.update(dict_)
@@ -96,7 +105,7 @@ def dns_reverse_resolver(address):
 def updateStatus(screen, text):
     try:
         global screen_size
-        screen.addnstr(0, screen_size.length-16, "{:<16}".format(text[:16]), 100)
+        screen.addnstr(0, screen_size.length - 16, "{:<16}".format(text[:16]), 100)
         screen.noutrefresh()
         screen.refresh()
         curses.doupdate()
@@ -126,12 +135,9 @@ def uiShowLogWindow(screen, heading, lines, config):
         box_h = screen_y - 10
     else:
         box_h = 30
-    box = listbox(box_h,
-                  screen_x,
-                  4,
-                  0,
-                  current_selected_arrow=config.arrow,
-                  lr_border=False)
+    box = listbox(
+        box_h, screen_x, 4, 0, current_selected_arrow=config.arrow, lr_border=False
+    )
 
     # Display box on the midle of screen
     box.heading = heading
@@ -211,8 +217,15 @@ def import_plugins(dir):
 
 def actionPlugin(screen, caseid):
     plugins = {}
-    plugins.update(import_plugins(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+"/action_plugin"))
-    plugins.update(import_plugins(os.path.expanduser("/usr/share/curitz/action_plugin")))
+    plugins.update(
+        import_plugins(
+            os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+            + "/action_plugin"
+        )
+    )
+    plugins.update(
+        import_plugins(os.path.expanduser("/usr/share/curitz/action_plugin"))
+    )
     plugins.update(import_plugins(os.path.expanduser("~/.curitz/action_plugin")))
 
     pkeys = list(plugins.keys())
@@ -242,7 +255,7 @@ def actionPlugin(screen, caseid):
 
             elif x == curses.KEY_ENTER or x == 13 or x == 10:
                 if not pkeys:
-                    log.debug('No plugin in list, exiting plugin manager')
+                    log.debug("No plugin in list, exiting plugin manager")
                     return
                 log.debug(pkeys)
                 log.debug(box.active_element)
@@ -254,7 +267,7 @@ def actionPlugin(screen, caseid):
                     log.error(traceback.format_exc())
                     return
 
-            elif x == 27 or x == ord('q') or x == ord('Q'):  # ESC and Q
+            elif x == 27 or x == ord("q") or x == ord("Q"):  # ESC and Q
                 raise KeyboardInterrupt("ESC pressed")
 
             box.draw()
@@ -273,7 +286,12 @@ def uiShowHistory(screen, caseid, config):
             for wrapped_line in textwrap.wrap(_line, 76, break_long_words=False):
                 lines.append("  {}".format(wrapped_line))
     updateStatus(screen, "")
-    uiShowLogWindow(screen, "History Case {} - {}".format(caseid, cases[caseid].get("descr", "")), lines, config)
+    uiShowLogWindow(
+        screen,
+        "History Case {} - {}".format(caseid, cases[caseid].get("descr", "")),
+        lines,
+        config,
+    )
 
 
 def uiShowLog(screen, caseid, config):
@@ -283,10 +301,19 @@ def uiShowLog(screen, caseid, config):
     lines = []
     updateStatus(screen, "Waiting...")
     for line in cases[caseid].log:
-        for _line in textwrap.wrap("{} {}".format(line["date"], line["header"]), screen_x-4, break_long_words=False):
+        for _line in textwrap.wrap(
+            "{} {}".format(line["date"], line["header"]),
+            screen_x - 4,
+            break_long_words=False,
+        ):
             lines.append("{}".format(_line))
     updateStatus(screen, "")
-    uiShowLogWindow(screen, "System Log Case {} - {}".format(caseid, cases[caseid].get("descr", "")), lines, config)
+    uiShowLogWindow(
+        screen,
+        "System Log Case {} - {}".format(caseid, cases[caseid].get("descr", "")),
+        lines,
+        config,
+    )
 
 
 def uiShowAttr(screen, caseid, config):
@@ -295,7 +322,12 @@ def uiShowAttr(screen, caseid, config):
     for line in cases[caseid].keys():
         lines.append("{:<15} : {:>}".format(line, repr(cases[caseid][line])))
 
-    uiShowLogWindow(screen, "Case {} - {}".format(caseid, cases[caseid].get("descr", "")), lines, config)
+    uiShowLogWindow(
+        screen,
+        "Case {} - {}".format(caseid, cases[caseid].get("descr", "")),
+        lines,
+        config,
+    )
 
 
 def strfdelta(tdelta, fmt):
@@ -315,9 +347,9 @@ def downtimeShortner(td):
     if td.seconds < 60:
         return "{:2d}s".format(td.seconds)
     if td.seconds / 60 < 60:
-        return "{:2.0f}m".format(td.seconds/60)
+        return "{:2.0f}m".format(td.seconds / 60)
     if td.seconds / 60 / 60 < 60:
-        return "{:2.0f}h".format(td.seconds/60/60)
+        return "{:2.0f}h".format(td.seconds / 60 / 60)
 
 
 def uiloop(screen, config):
@@ -345,14 +377,28 @@ def uiloop(screen, config):
         pass
     screen_size = BoxSize(*screen.getmaxyx())
     if config.kiosk:
-        lb = listbox(screen_size.height - 1, screen_size.length, 1, 0, current_selected_arrow=config.arrow)
+        lb = listbox(
+            screen_size.height - 1,
+            screen_size.length,
+            1,
+            0,
+            current_selected_arrow=config.arrow,
+        )
     else:
-        lb = listbox(screen_size.height - 4, screen_size.length, 1, 0, current_selected_arrow=config.arrow)
+        lb = listbox(
+            screen_size.height - 4,
+            screen_size.length,
+            1,
+            0,
+            current_selected_arrow=config.arrow,
+        )
 
     screen.clear()
     screen.refresh()
 
-    with ritz(config.Server, username=config.User, password=config.Secret, timeout=30) as session:
+    with ritz(
+        config.Server, username=config.User, password=config.Secret, timeout=30
+    ) as session:
         with ritz_notifier(session) as notifier:
             try:
                 runner(screen, config)
@@ -362,23 +408,38 @@ def uiloop(screen, config):
 
 def sortCases(casedict, field="lasttrans", filter=""):
     cases_sorted = []
-    for key in sorted(cases, key=lambda k: (0 if cases[k].get("state") == caseState.IGNORED
-                                            else 1, cases[k]._attrs[field])):
+    for key in sorted(
+        cases,
+        key=lambda k: (
+            0 if cases[k].get("state") == caseState.IGNORED else 1,
+            cases[k]._attrs[field],
+        ),
+    ):
         show = False
         if "type" in cases[key]._attrs:
-            if re.match(".*{}".format(filter), str(cases[key].get("type")), re.IGNORECASE):
+            if re.match(
+                ".*{}".format(filter), str(cases[key].get("type")), re.IGNORECASE
+            ):
                 show = True
         if "state" in cases[key]._attrs:
-            if re.match(".*{}".format(filter), str(cases[key].get("state")), re.IGNORECASE):
+            if re.match(
+                ".*{}".format(filter), str(cases[key].get("state")), re.IGNORECASE
+            ):
                 show = True
         if "router" in cases[key]._attrs:
-            if re.match(".*{}".format(filter), str(cases[key].get("router")), re.IGNORECASE):
+            if re.match(
+                ".*{}".format(filter), str(cases[key].get("router")), re.IGNORECASE
+            ):
                 show = True
         if "descr" in cases[key]._attrs:
-            if re.match(".*{}".format(filter), str(cases[key].get("descr")), re.IGNORECASE):
+            if re.match(
+                ".*{}".format(filter), str(cases[key].get("descr")), re.IGNORECASE
+            ):
                 show = True
         if "port" in cases[key]._attrs:
-            if re.match(".*{}".format(filter), str(cases[key].get("port")), re.IGNORECASE):
+            if re.match(
+                ".*{}".format(filter), str(cases[key].get("port")), re.IGNORECASE
+            ):
                 show = True
 
         if show:
@@ -402,19 +463,20 @@ def create_case_list(config):
         port="Port",
         description="Description",
         age=" Age",
-        downtime="Dt")
+        downtime="Dt",
+    )
     for c in sorted_cases:
         if c in visible_cases:
             case = cases[c]
             try:
                 age = datetime.datetime.now() - case.opened
                 common = {}
-                common['id'] = case.id
-                common['selected'] = "*" if case.id in cases_selected else " "
-                common['router'] = case.router
-                common['admstate'] = case.state.value[:7]
-                common['age'] = strfdelta(age, "{days:2d}d {hours:02}:{minutes:02}")
-                common['priority'] = case.priority
+                common["id"] = case.id
+                common["selected"] = "*" if case.id in cases_selected else " "
+                common["router"] = case.router
+                common["admstate"] = case.state.value[:7]
+                common["age"] = strfdelta(age, "{days:2d}d {hours:02}:{minutes:02}")
+                common["priority"] = case.priority
                 if "downtime" in case.keys():
                     common["downtime"] = downtimeShortner(case.downtime)
                 else:
@@ -436,73 +498,114 @@ def create_case_list(config):
                         color = cBlue
                     elif case.state in [caseState.CLOSED]:
                         color = cGreen
-                    elif case.portstate in ['down', 'lowerLayerDown'] and case.state == caseState.OPEN:
+                    elif (
+                        case.portstate in ["down", "lowerLayerDown"]
+                        and case.state == caseState.OPEN
+                    ):
                         color = cRed
-                    elif case.portstate in ['down', 'lowerLayerDown'] and case.state in [caseState.WORKING,
-                                                                                         caseState.WAITING]:
+                    elif case.portstate in [
+                        "down",
+                        "lowerLayerDown",
+                    ] and case.state in [caseState.WORKING, caseState.WAITING]:
                         color = cYellow
-                    lb.add(BoxElement(case.id,
-                                      table_structure.format(
-                                          **common,
-                                          opstate="PORT %s" % case.portstate[0:5],
-                                          port=interfaceRenamer(case.port),
-                                          description=case.get("descr", ""),
-                                      ), color))
+                    lb.add(
+                        BoxElement(
+                            case.id,
+                            table_structure.format(
+                                **common,
+                                opstate="PORT %s" % case.portstate[0:5],
+                                port=interfaceRenamer(case.port),
+                                description=case.get("descr", ""),
+                            ),
+                            color,
+                        )
+                    )
                 elif case.type == caseType.BGP:
                     if case.state in [caseState.IGNORED]:
                         color = cBlue
                     elif case.state in [caseState.CLOSED]:
                         color = cGreen
-                    elif case.bgpos == 'down' and case.state == caseState.OPEN:
+                    elif case.bgpos == "down" and case.state == caseState.OPEN:
                         color = cRed
-                    elif case.bgpos == 'down' and case.state in [caseState.WORKING, caseState.WAITING]:
+                    elif case.bgpos == "down" and case.state in [
+                        caseState.WORKING,
+                        caseState.WAITING,
+                    ]:
                         color = cYellow
-                    lb.add(BoxElement(case.id,
-                                      table_structure.format(
-                                          **common,
-                                          opstate="BGP  %s" % case.bgpos[0:5],
-                                          port="AS{}".format(case.remote_as),
-                                          description="%s %s" % (dns_reverse_resolver(str(case.remote_addr)),
-                                                                 case.get("lastevent", "")),
-                                      ), color))
+                    lb.add(
+                        BoxElement(
+                            case.id,
+                            table_structure.format(
+                                **common,
+                                opstate="BGP  %s" % case.bgpos[0:5],
+                                port="AS{}".format(case.remote_as),
+                                description="%s %s"
+                                % (
+                                    dns_reverse_resolver(str(case.remote_addr)),
+                                    case.get("lastevent", ""),
+                                ),
+                            ),
+                            color,
+                        )
+                    )
                 elif case.type == caseType.BFD:
                     if case.state in [caseState.IGNORED]:
                         color = cBlue
                     elif case.state in [caseState.CLOSED]:
                         color = cGreen
-                    elif case.bfdstate == 'down' and case.state == caseState.OPEN:
+                    elif case.bfdstate == "down" and case.state == caseState.OPEN:
                         color = cRed
-                    elif case.bfdstate == 'down' and case.state in [caseState.WORKING, caseState.WAITING]:
+                    elif case.bfdstate == "down" and case.state in [
+                        caseState.WORKING,
+                        caseState.WAITING,
+                    ]:
                         color = cYellow
 
                     try:
                         port = case.bfdaddr
                     except Exception:
                         port = "ix {}".format(case.bfdix)
-                    lb.add(BoxElement(case.id,
-                                      table_structure.format(
-                                          **common,
-                                          opstate="BFD  %s" % case.bfdstate[0:5],
-                                          port=str(port),
-                                          description="{}, {}".format(case.get('neigh_rdns'),
-                                                                      case.get('lastevent'))
-                                      ), color))
+                    lb.add(
+                        BoxElement(
+                            case.id,
+                            table_structure.format(
+                                **common,
+                                opstate="BFD  %s" % case.bfdstate[0:5],
+                                port=str(port),
+                                description="{}, {}".format(
+                                    case.get("neigh_rdns"), case.get("lastevent")
+                                ),
+                            ),
+                            color,
+                        )
+                    )
                 elif case.type == caseType.REACHABILITY:
                     if case.state in [caseState.IGNORED]:
                         color = cBlue
                     elif case.state in [caseState.CLOSED]:
                         color = cGreen
-                    elif case.reachability == 'no-response' and case.state == caseState.OPEN:
+                    elif (
+                        case.reachability == "no-response"
+                        and case.state == caseState.OPEN
+                    ):
                         color = cRed
-                    elif case.reachability == 'no-response' and case.state in [caseState.WORKING, caseState.WAITING]:
+                    elif case.reachability == "no-response" and case.state in [
+                        caseState.WORKING,
+                        caseState.WAITING,
+                    ]:
                         color = cYellow
-                    lb.add(BoxElement(case.id,
-                                      table_structure.format(
-                                          **common,
-                                          opstate=case.reachability,
-                                          port="",
-                                          description="",
-                                      ), color))
+                    lb.add(
+                        BoxElement(
+                            case.id,
+                            table_structure.format(
+                                **common,
+                                opstate=case.reachability,
+                                port="",
+                                description="",
+                            ),
+                            color,
+                        )
+                    )
                 elif case.type == caseType.ALARM:
                     if case.state in [caseState.IGNORED]:
                         color = cBlue
@@ -510,20 +613,30 @@ def create_case_list(config):
                         color = cGreen
                     elif case.alarm_count > 0 and case.state == caseState.OPEN:
                         color = cRed
-                    elif case.alarm_count > 0 and case.state in [caseState.WORKING, caseState.WAITING]:
+                    elif case.alarm_count > 0 and case.state in [
+                        caseState.WORKING,
+                        caseState.WAITING,
+                    ]:
                         color = cYellow
-                    lb.add(BoxElement(case.id,
-                                      table_structure.format(
-                                          **common,
-                                          opstate="ALRM {}".format(case.alarm_type),
-                                          port="",
-                                          description=case.lastevent,
-                                      ), color))
+                    lb.add(
+                        BoxElement(
+                            case.id,
+                            table_structure.format(
+                                **common,
+                                opstate="ALRM {}".format(case.alarm_type),
+                                port="",
+                                description=case.lastevent,
+                            ),
+                            color,
+                        )
+                    )
                 else:
                     log.error("Unable to create table for case {}".format(case.id))
                     log.error(repr(case._attrs))
             except Exception:
-                log.exception("Exception while createing table entry for case {}".format(case.id))
+                log.exception(
+                    "Exception while createing table entry for case {}".format(case.id)
+                )
                 log.fatal(repr(case._attrs))
                 raise
 
@@ -550,11 +663,13 @@ def runner(screen, config):
             continue
         cases[case.id] = case
         elements = int((len(cases) / len(caselist)) * 20)
-        screen.addstr(9, 10,
-                      "[{:-<20}] Loaded {} of {} cases".format(
-                          "=" * elements,
-                          len(cases),
-                          len(caselist)))
+        screen.addstr(
+            9,
+            10,
+            "[{:-<20}] Loaded {} of {} cases".format(
+                "=" * elements, len(cases), len(caselist)
+            ),
+        )
         screen.refresh()
 
     screen.clear()
@@ -579,7 +694,7 @@ def runner(screen, config):
                 lb.resize(screen_size.height - 1, screen_size.length)
             else:
                 lb.resize(screen_size.height - 4, screen_size.length)
-            updateStatus(screen, 'refreshed')
+            updateStatus(screen, "refreshed")
 
         while poll(config):
             update_ui = 999
@@ -591,7 +706,7 @@ def runner(screen, config):
             # Nothing happened, check for changes
             pass
 
-        elif x == ord('q'):
+        elif x == ord("q"):
             # Q pressed, Exit application
             return
 
@@ -623,26 +738,26 @@ def runner(screen, config):
             else:
                 lb.active_element = 0
 
-        elif x == ord('p'):
+        elif x == ord("p"):
             if cases_selected:
                 uiPollCases(cases_selected)
             else:
                 uiPollCases([lb.active.id])
 
-        elif x == ord('f'):
+        elif x == ord("f"):
             # Change Filter
             uiSimpleFilterWindow(screen, config.UTF8)
             update_ui = 999
             lb.active_element = 0
 
-        elif x == ord('m'):
+        elif x == ord("m"):
             # Clear flapping
             if cases_selected:
                 uiCFlapCases(cases_selected)
             else:
                 uiCFlapCases([lb.active.id])
 
-        elif x == ord('x'):
+        elif x == ord("x"):
             update_ui = 999
             selection_time = time.time()
 
@@ -652,7 +767,7 @@ def runner(screen, config):
             else:
                 cases_selected.append(lb.active.id)
 
-        elif x == ord('X'):
+        elif x == ord("X"):
             update_ui = 999
             cases_tmp = list(cases_selected)
             cases_selected.clear()
@@ -663,12 +778,12 @@ def runner(screen, config):
             cases_selected_last.clear()
             cases_selected_last.extend(cases_tmp)
 
-        elif x == ord('c'):
+        elif x == ord("c"):
             update_ui = 999
             # Clear selection
             cases_selected.clear()
 
-        elif x == ord('u'):
+        elif x == ord("u"):
             update_ui = 999
             # Update selected cases
             if cases_selected:
@@ -676,7 +791,7 @@ def runner(screen, config):
             else:
                 uiUpdateCases(screen, [lb.active.id], config.UTF8)
 
-        elif x == ord('U'):
+        elif x == ord("U"):
             update_ui = 999
             # Update selected cases
             if cases_selected:
@@ -686,7 +801,7 @@ def runner(screen, config):
                 uiUpdateCases(screen, [lb.active.id], config.UTF8)
                 uiSetState(screen, [lb.active.id], config)
 
-        elif x == ord('i'):
+        elif x == ord("i"):
             update_ui = 999
             # Update selected cases
             if "{id" in table_structure:
@@ -694,7 +809,7 @@ def runner(screen, config):
             else:
                 table_structure = table_structure_id
 
-        elif x == ord('s'):
+        elif x == ord("s"):
             update_ui = 999
             # Update selected cases
             if cases_selected:
@@ -702,7 +817,7 @@ def runner(screen, config):
             else:
                 uiSetState(screen, [lb.active.id], config)
 
-        elif x == ord('y'):
+        elif x == ord("y"):
             update_ui = 999
             cases_to_delete = []
             for id in cases:
@@ -715,9 +830,9 @@ def runner(screen, config):
             if lb.active_element >= len(visible_cases):
                 # If the current active element is beyond the item list end
                 # then move it to the last visible element
-                lb.active_element = len(visible_cases)-1
+                lb.active_element = len(visible_cases) - 1
 
-        elif x == ord('1'):
+        elif x == ord("1"):
             update_ui = 999
             actionPlugin(screen, lb.active.id)
 
@@ -729,7 +844,7 @@ def runner(screen, config):
             update_ui = 999
             uiShowHistory(screen, lb.active.id, config)
 
-        elif x == ord('l'):
+        elif x == ord("l"):
             # [ENTER], CR or LF
             update_ui = 999
             uiShowLog(screen, lb.active.id, config)
@@ -762,22 +877,45 @@ def draw(screen, server):
 
     screen_size = BoxSize(*screen.getmaxyx())
     screen.erase()
-    screen.addstr(0, 0, "cuRitz version {}  -  {}".format(__version__, server), curses.A_BOLD)
-    screen.addstr(screen_size.height - 3, 0, "<=>=Display attributes  m=Clear Flapping   i=Show/Hide ID   X=Restore last selection"[:screen_size.length - 1]) # noqa
-    screen.addstr(screen_size.height - 2, 0, "s=Set Stats u=Update History U=Update History and Set State f=Filter y=Remove Closed p=poll"[:screen_size.length - 1]) # noqa
-    screen.addstr(screen_size.height - 1, 0, "<ENTER>=Show history  <UP/DOWN>=Navigate q=Quit  l=Show Logs   x=(de)select  c=Clear selection"[:screen_size.length - 1]) # noqa
+    screen.addstr(
+        0, 0, "cuRitz version {}  -  {}".format(__version__, server), curses.A_BOLD
+    )
+    screen.addstr(
+        screen_size.height - 3,
+        0,
+        "<=>=Display attributes  m=Clear Flapping   i=Show/Hide ID   X=Restore last selection"[
+            : screen_size.length - 1
+        ],
+    )  # noqa
+    screen.addstr(
+        screen_size.height - 2,
+        0,
+        "s=Set Stats u=Update History U=Update History and Set State f=Filter y=Remove Closed p=poll"[
+            : screen_size.length - 1
+        ],
+    )  # noqa
+    screen.addstr(
+        screen_size.height - 1,
+        0,
+        "<ENTER>=Show history  <UP/DOWN>=Navigate q=Quit  l=Show Logs   x=(de)select  c=Clear selection"[
+            : screen_size.length - 1
+        ],
+    )  # noqa
     screen.noutrefresh()
     lb.draw()
     curses.doupdate()
 
+
 def uiPollCases(caseids):
-   for case in caseids:
-       cases[case].poll()
+    for case in caseids:
+        cases[case].poll()
+
 
 def uiCFlapCases(caseids):
-   for case in caseids:
-       if cases[case].type == caseType.PORTSTATE:
-           cases[case].clear_flapping()
+    for case in caseids:
+        if cases[case].type == caseType.PORTSTATE:
+            cases[case].clear_flapping()
+
 
 def uiUpdateCases(screen, caseids, utf8=False):
     update = uiUpdateCaseWindow(screen, len(caseids), utf8)
@@ -828,24 +966,24 @@ def uiSetStateWindow(screen, number, config):
                 if box.active_element < len(box) - 1:
                     box.active_element += 1
 
-            elif x == ord('o') or x == ord('O'):
+            elif x == ord("o") or x == ord("O"):
                 box.active_element = 1
-            elif x == ord('w') or x == ord('W'):
+            elif x == ord("w") or x == ord("W"):
                 box.active_element = 2
-            elif x == ord('a') or x == ord('A'):
+            elif x == ord("a") or x == ord("A"):
                 box.active_element = 3
-            elif x == ord('n') or x == ord('N'):
+            elif x == ord("n") or x == ord("N"):
                 box.active_element = 4
-            elif x == ord('i') or x == ord('I'):
+            elif x == ord("i") or x == ord("I"):
                 box.active_element = 5
-            elif x == ord('c') or x == ord('C'):
+            elif x == ord("c") or x == ord("C"):
                 box.active_element = 6
             elif x == curses.KEY_ENTER or x == 13 or x == 10:
                 if box.active_element == 0:
                     raise KeyboardInterrupt("No Change pressed")
                 else:
                     return box.active.lower()
-            elif x == 27 or x == ord('q') or x == ord('Q'):  # ESC and Q
+            elif x == 27 or x == ord("q") or x == ord("Q"):  # ESC and Q
                 raise KeyboardInterrupt("ESC pressed")
 
             box.draw()
@@ -860,7 +998,7 @@ def uiUpdateCaseWindow(screen, number, utf8=False):
     (screen_y, screen_x) = screen.getmaxyx()
 
     border = curses.newwin(9, screen_x, 4, 0)
-    textbox = curses.newwin(5, screen_x-2, 6, 1)
+    textbox = curses.newwin(5, screen_x - 2, 6, 1)
     border.box()
     border.addstr(0, 1, "Add new history line")
     border.addstr(8, 1, "Ctrl+C to Abort    Ctrl+G to send    Ctrl+H = Backspace")
@@ -932,7 +1070,11 @@ def poll(config):
         if update.type == "state":
             states = update.info.split(" ")
             if states[1] == "closed" and config.autoremove:
-                log.debug("Automatically removing {} because of autoremove argument".format(update.id))
+                log.debug(
+                    "Automatically removing {} because of autoremove argument".format(
+                        update.id
+                    )
+                )
                 cases.pop(update.id, None)
                 log.debug("List after remove: {}".format(cases.keys()))
                 if update.id in cases_selected:
@@ -957,42 +1099,52 @@ def poll(config):
 
 
 def parse_args(args_list=None):
-    parser = argparse.ArgumentParser(description='Process some integers.')
-    parser.add_argument('-p', '--profile', default=DEFAULT_PROFILE,
-                        help='use Zino profile')
-    parser.add_argument('--profiles', action='store_true',
-                        help='List Zino profiles')
-    parser.add_argument('-c', '--config', default='~/.ritz.tcl',
-                        help='zino config file')
-    parser.add_argument('--nocolor', action='store_true',
-                        help='Show client in black-n-white mode')
-    parser.add_argument('--debug', action='store_true',
-                        help='write debug logfile')
-    parser.add_argument('--kiosk', action='store_true',
-                        help='Hides all keybinding fields')
-    parser.add_argument('--autoremove', action='store_true',
-                        help='Automatically remove closed cases')
-    parser.add_argument('--arrow', action='store_true',
-                        help="Use arrow for current element marker")
+    parser = argparse.ArgumentParser(description="Process some integers.")
+    parser.add_argument(
+        "-p", "--profile", default=DEFAULT_PROFILE, help="use Zino profile"
+    )
+    parser.add_argument("--profiles", action="store_true", help="List Zino profiles")
+    parser.add_argument(
+        "-c", "--config", default="~/.ritz.tcl", help="zino config file"
+    )
+    parser.add_argument(
+        "--nocolor", action="store_true", help="Show client in black-n-white mode"
+    )
+    parser.add_argument("--debug", action="store_true", help="write debug logfile")
+    parser.add_argument(
+        "--kiosk", action="store_true", help="Hides all keybinding fields"
+    )
+    parser.add_argument(
+        "--autoremove", action="store_true", help="Automatically remove closed cases"
+    )
+    parser.add_argument(
+        "--arrow", action="store_true", help="Use arrow for current element marker"
+    )
     encoding_parser = parser.add_mutually_exclusive_group()
-    encoding_parser.add_argument('--utf8', action='store_true',
-                                 default=False,
-                                 help='Force usage of UTF8 encoding')
-    encoding_parser.add_argument('--ascii', action='store_false',
-                                 dest='utf8',
-                                 help='Force usage of ASCII encoding')
+    encoding_parser.add_argument(
+        "--utf8",
+        action="store_true",
+        default=False,
+        help="Force usage of UTF8 encoding",
+    )
+    encoding_parser.add_argument(
+        "--ascii",
+        action="store_false",
+        dest="utf8",
+        help="Force usage of ASCII encoding",
+    )
     args = parser.parse_args(args_list)
     return args
 
 
 def build_config(conf, args):
-    profile = getattr(args, 'profile', DEFAULT_PROFILE)
+    profile = getattr(args, "profile", DEFAULT_PROFILE)
     config = Config(conf.get(profile, {}))
-    config.UTF8 = getattr(args, 'utf8', False)
+    config.UTF8 = getattr(args, "utf8", False)
     bool_config_args = ("kiosk", "autoremove", "nocolor")
     for arg in bool_config_args:
         setattr(config, arg, getattr(args, arg, False))
-    config.arrow = ">" if getattr(args, 'arrow', False) else ""
+    config.arrow = ">" if getattr(args, "arrow", False) else ""
     return config
 
 
@@ -1010,7 +1162,7 @@ def main():
 
     if args.debug:
         log.setLevel(logging.DEBUG)
-        log.addHandler(logging.FileHandler('curitz.log'))
+        log.addHandler(logging.FileHandler("curitz.log"))
 
     if args.profile:
         if args.profile not in conf.keys():

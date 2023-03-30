@@ -1,9 +1,9 @@
 import curses
 
-from curitz.culistbox import listbox, BoxSize, BoxElement
+from curitz.culistbox import listbox
 
 
-class demoplugin1():
+class demoplugin1:
     def __init__(self):
         self.description = "Demoplugin"
 
@@ -34,7 +34,7 @@ class demoplugin1():
 
                 elif x == curses.KEY_ENTER or x == 13 or x == 10:
                     pass
-                elif x == 27 or x == ord('q') or x == ord('Q'):  # ESC and Q
+                elif x == 27 or x == ord("q") or x == ord("Q"):  # ESC and Q
                     raise KeyboardInterrupt("ESC pressed")
 
                 box.draw()
