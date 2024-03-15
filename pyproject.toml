@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "curitz"
-description = "Curses interface to Zino"
+description = "Python ncurses terminal client to Zino"
 authors = [{name="Runar Borge", email="runar.borge@sikt.no"}]
 maintainers = [{name="Uninett Opensource", email="opensource@uninett.no"}]
 readme = "README.rst"
