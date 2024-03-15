@@ -77,6 +77,10 @@ if installing from source or::
 if installing from Pypi. This should normally put the binary and library under
 ``.local`` on Linux.
 
+If you develop python programs other than curitz we recommend that you install
+with ``pipx``. curitz and its dependencies will then be stored on your user but
+separately from any other thing you are working on.
+
 Development
 ===========
 
