@@ -10,7 +10,7 @@ maintainers = [{name="Uninett Opensource", email="opensource@uninett.no"}]
 readme = "README.rst"
 requires-python = ">=3.7"
 dependencies = [
-    "zinolib<0.9.21",
+    "zinolib>=0.9.23,<1.0",
     "dnspython",
 ]
 license = {file="LICENSE"}
