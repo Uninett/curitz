@@ -2,7 +2,8 @@
 curitz
 ======
 
-Python curses package to interface with Zino.
+*curitz* is a CUrses-based Remote Interface To Zino, i.e. a terminal-based user
+interface to interact with a Zino server.
 
 Split from internal project PyRitz on 2023-03-30.
 
