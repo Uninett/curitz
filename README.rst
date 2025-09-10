@@ -40,10 +40,39 @@ to the alternative server::
 
 This would connect to ``alternative.zino.server.com``, authenticated as ``USER_2``.
 
+Installing
+==========
+
+From PyPI
+---------
+
+curitz is available on PyPI. The quickest way to install it is therefore using
+some variation of ``pip install``.  We recommend installing it into your own
+user environment in order to not interfere with system packages, like so::
+
+    pip install --user curitz
+
+This should normally put the binary and library under ``.local`` on Linux.
+
+If you have the ``uv`` tool available on your system, you can install and run
+curitz directly by issuing the command::
+
+    uvx curitz
+
+From source
+-----------
+
+If installing directly from a clone of this source code repository, you can
+install curitz (again, we recommend installing to your own user environment)::
+
+    pip install --user .
+
+
 Running
 =======
 
-After installingOnce it is on your path the terminal program ``curitz`` will be available to run.
+After installing (and assuming your ``PATH`` environment variable is set
+correctly), the terminal program ``curitz`` will be available to run.
 
 Run ``curitz -h`` for info about the available arguments.
 
@@ -63,25 +92,6 @@ To test on a specific python other than current, run::
     tox -e py{version}
 
 where ``version`` is of the form "311" for Python 3.11.
-
-Install
-=======
-
-To use ``curitz`` we recommend installing it to your local user, for instance
-with ``pip`'s ``--user``-flag::
-
-    pip install --user .
-
-if installing from source or::
-
-    pip install --user curitz
-
-if installing from Pypi. This should normally put the binary and library under
-``.local`` on Linux.
-
-If you develop python programs other than curitz we recommend that you install
-with ``pipx``. curitz and its dependencies will then be stored on your user but
-separately from any other thing you are working on.
 
 Development
 ===========
