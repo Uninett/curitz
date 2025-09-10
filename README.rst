@@ -13,11 +13,12 @@ There needs to be a file ``.ritz.tcl``, conventionally placed in your
 home-directory.
 
 Example ``.ritz.tcl``::
+
     set Secret ZINO1SERVERTOKEN_A
     set User USERNAME_1
     set Server my.zino.server.com
     set Port 8001
-
+    
     set _Secret(ALTERNATE) ZINO1SERVERTOKEN_B
     set _User(ALTERNATE) USERNAME_2
     set _Server(ALTERNATE) alternative.zino.server.com
@@ -28,15 +29,15 @@ created by the admin of the zino server. ``Server`` and ``Port`` hopefully
 needs no explanation.
 
 Running ``curitz`` without the ``-p``-argument would connect to
-"my.zino.server.com", authenticated as USER_1.
+``my.zino.server.com``, authenticated as ``USER_1``.
 
 The bottom four lines are optional. They are an example of how to configure
 alternative servers. Running ``curitz`` with the ``/-``-argument would connect
 to the alternative server::
 
-    ``$ curitz -p ALTERNATE``
+    $ curitz -p ALTERNATE
 
-This would connect to "alternative.zino.server.com", authenticated as USER_2.
+This would connect to ``alternative.zino.server.com``, authenticated as ``USER_2``.
 
 Running
 =======
