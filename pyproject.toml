@@ -32,6 +32,7 @@ dynamic = ["version"]
 curitz = "curitz.cli:main"
 
 [dependency-groups]
+docs = ["sphinx"]
 test = [
     "tox",
     "mypy",

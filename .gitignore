@@ -4,6 +4,7 @@
 !.github
 !.gitignore
 !.pre-commit-config.yaml
+!.readthedocs.yaml
 
 *.pyc
 *.conf
