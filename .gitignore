@@ -1,12 +1,18 @@
+.*
+
+!.git-blame-ignore-revs
+!.github
+!.gitignore
+!.pre-commit-config.yaml
+
 *.pyc
 *.conf
 *.log
 *.bak
 *.egg-info
-.coverage*
 
+_build
 __pycache__
-.mypy_cache
 src/curitz/version.py
 build
 dist
