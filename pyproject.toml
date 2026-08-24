@@ -28,16 +28,16 @@ classifiers = [
 ]
 dynamic = ["version"]
 
-[project.optional-dependencies]
+[project.scripts]
+curitz = "curitz.cli:main"
+
+[dependency-groups]
 test = [
     "tox",
     "mypy",
     "flake8",
     "coverage",
 ]
-
-[project.scripts]
-curitz = "curitz.cli:main"
 
 [tool.setuptools]
 include-package-data = false

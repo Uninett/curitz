@@ -19,7 +19,7 @@ Example ``.ritz.tcl``::
     set User USERNAME_1
     set Server my.zino.server.com
     set Port 8001
-    
+
     set _Secret(ALTERNATE) ZINO1SERVERTOKEN_B
     set _User(ALTERNATE) USERNAME_2
     set _Server(ALTERNATE) alternative.zino.server.com
@@ -92,6 +92,10 @@ To test on a specific python other than current, run::
     tox -e py{version}
 
 where ``version`` is of the form "311" for Python 3.11.
+
+The test-dependencies can be installed manually via::
+
+    pip install --group test
 
 Development
 ===========
