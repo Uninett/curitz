@@ -9,6 +9,12 @@ BoxSize = NamedTuple("BoxSize", [("height", int), ("length", int)])
 BoxElement = NamedTuple("BoxElement", [("id", int), ("text", str), ("font_args", List)])
 
 
+def get_pagination_indexes(page_size, page_number):
+    start_index = page_size * page_number
+    end_index = start_index + page_size
+    return start_index, end_index
+
+
 class listbox:
     """
     Create a curses lixtbox.
@@ -59,54 +65,58 @@ class listbox:
             self.box.border()
         self.box.addstr(0, 1, self.heading)
 
+        if not self.elements:
+            self.box.noutrefresh()
+            return
+
         # Get current page
-        page = self.active_element // self.pagesize
-        page_start = self.pagesize * page
+        page_number = self.active_element // self.pagesize
+        # Protect against mutation by working on a copy
+        page_start, page_end = get_pagination_indexes(self.pagesize, page_number)
 
-        if len(self.elements) > 0:  # Allow us to draw a empty listobx
-            # Run until screen is full of elements or we are at the bottom of list
-            for i in range(page_start, self.pagesize + page_start):
-                if isinstance(self.elements[i], BoxElement):
-                    curr_element = self.elements[i]
-                elif isinstance(self.elements[i], str):
-                    curr_element = BoxElement(i, self.elements[i], [])
+        # Run until screen is full of elements or we are at the bottom of list
+        for i, raw_element in enumerate(self.elements[page_start:page_end]):
+            position = page_number * self.pagesize + i
+
+            if isinstance(raw_element, BoxElement):
+                curr_element = raw_element
+            elif isinstance(raw_element, str):
+                curr_element = BoxElement(position, raw_element, [])
+            else:
+                raise ValueError("LogLine is not a string or BoxElement")
+
+            ar = ""
+            c = (
+                curr_element.font_args
+                if curr_element.font_args
+                else [self.normalText]
+            )
+            start_at = 1
+            if position + page_start == self.active_element + page_start:
+                # This is the current active element
+                if self.arrow:
+                    ar = self.arrow
+                    start_at = 0
                 else:
-                    raise ValueError("LogLine is not a string or BoxElement")
-                if len(self.elements) == 0:
-                    self.box.addstr(1, 1, "Nothing to display", self.highlightText)
-                else:
-                    ar = ""
-                    c = (
-                        curr_element.font_args
-                        if curr_element.font_args
-                        else [self.normalText]
-                    )
-                    start_at = 1
-                    if i + page_start == self.active_element + page_start:
-                        # This is the current active element
-                        if self.arrow:
-                            ar = self.arrow
-                            start_at = 0
-                        else:
-                            c = [self.highlightText]
-                    # Print the line
+                    c = [self.highlightText]
+            # Print the line
 
-                    self.box.addstr(
-                        i + 1 - page_start,
-                        start_at,
-                        "{}{}".format(
-                            ar,
-                            (curr_element.text)[0 : self.size.length - 2].ljust(
-                                self.size.length - 2
-                            ),
-                        ),
-                        *c
-                    )
+            self.box.addstr(
+                position + 1 - page_start,
+                start_at,
+                "{}{}".format(
+                    ar,
+                    (curr_element.text)[0 : self.size.length - 2].ljust(
+                        self.size.length - 2
+                    ),
+                ),
+                *c
+            )
 
-                    if (
-                        i == len(self) - 1
-                    ):  # Len(self) returns the current length of the list
-                        break
+            if (
+                position == len(self) - 1
+            ):  # Len(self) returns the current length of the list
+                break
 
         self.box.noutrefresh()
 
