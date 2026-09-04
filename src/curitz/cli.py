@@ -17,9 +17,9 @@ from curitz import __version__
 from curitz.timed_cache import timed_cache
 import curitz.textpad as utf8textpad
 from curitz.culistbox import listbox, BoxSize, BoxElement
+from zinolib.config import tcl
 from zinolib.ritz import (
     ritz,
-    parse_tcl_config,
     notifier as ritz_notifier,
     caseType,
     caseState,
@@ -1153,9 +1153,9 @@ def main():
 
     try:
         if args.config:
-            conf = parse_tcl_config(args.config)
+            conf = read_config(args.config)
         else:
-            conf = parse_tcl_config("~/.ritz.tcl")
+            conf = read_config("~/.ritz.tcl")
     except FileNotFoundError as E:
         sys.stderr.write("Unable to load configuration for curitz:\n")
         sys.exit("{}".format(E))
@@ -1185,6 +1185,21 @@ def main():
 
     except NotConnectedError as E:
         sys.exit("Unable to contact Zino: {}".format(E))
+
+
+def read_config(filename):
+    """Read and parse a .ritz.tcl config file
+
+    Deliberately does not use zinolib's own ``parse_tcl_config()``: since
+    zinolib 1.0 that wrapper reduces its argument to a bare filename and
+    looks for that in a fixed list of directories. It therefore ignores any
+    path given to ``-c``, and cannot find the default ``~/.ritz.tcl`` at all.
+
+    :param filename: path to the config file, ``~`` is expanded
+    :return: dict mapping profile name to a dict of that profile's config keys
+    :raises FileNotFoundError: if the file does not exist
+    """
+    return tcl.parse(tcl.load(filename))
 
 
 if __name__ == "__main__":
