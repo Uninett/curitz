@@ -37,6 +37,7 @@ test = [
     "mypy",
     "flake8",
     "coverage",
+    "pytest",
 ]
 
 [tool.setuptools]
