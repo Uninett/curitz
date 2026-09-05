@@ -14,7 +14,7 @@ import traceback
 import importlib
 
 from curitz import __version__
-from curitz.timed_cache import timed_cache
+from curitz.reverse_dns import ReverseResolver
 import curitz.textpad as utf8textpad
 from curitz.culistbox import listbox, BoxSize, BoxElement
 from zinolib.config import tcl
@@ -94,12 +94,32 @@ class Config:
         self.__dict__.update(kwargs)
 
 
-@timed_cache(minutes=60)
 def dns_reverse_resolver(address):
-    try:
-        return str(resolver.query(dns.reversename.from_address(str(address)), "PTR")[0])
-    except Exception:
-        return str(address)
+    """Reverse-resolve `address` without blocking the caller.
+
+    Returns the address itself until a background worker has resolved it; see
+    :mod:`curitz.reverse_dns`.  Callers are redraw paths that run once per
+    keypress, so this must never do I/O of its own.
+
+    :param address: an IP address, as a string or anything `str()` accepts.
+    :return: the resolved name, or the address as a string.
+    """
+    return reverse_resolver.lookup(address)
+
+
+def ptr_lookup(address):
+    """Look up the PTR record for `address`.  Blocks; worker threads only.
+
+    :param address: an IP address, as a string.
+    :return: the name the address reverse-resolves to.
+    :raises NameError: if dnspython could not be imported, which is how this
+        module keeps it a soft dependency at runtime.
+    :raises Exception: whatever dnspython raises for a failed lookup.
+    """
+    return str(resolver.query(dns.reversename.from_address(address), "PTR")[0])
+
+
+reverse_resolver = ReverseResolver(ptr_lookup)
 
 
 def updateStatus(screen, text):
