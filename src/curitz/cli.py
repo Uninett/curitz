@@ -30,6 +30,10 @@ from zinolib.ritz import (
 
 DEFAULT_PROFILE = "default"
 
+# Seconds before the case list is rebuilt even if nothing has changed, so that
+# the age and downtime columns keep ticking
+CASE_LIST_MAX_AGE = 10
+
 
 # Hotfix to fix OSX reporting only "UTF-8" on LC_CTYPE
 try:
@@ -696,10 +700,11 @@ def runner(screen, config):
     screen.refresh()
 
     create_case_list(config)
-    lb.draw()
     draw(screen, config.Server)
 
-    update_ui = time.time()
+    last_rebuild = time.time()
+    needs_rebuild = False
+    needs_repaint = False
     keepalive = time.time()
     selection_time = time.time()
 
@@ -707,8 +712,10 @@ def runner(screen, config):
         x = screen.getch()
 
         if curses.is_term_resized(*screen_size):
-            # Screen is resized
-            update_ui = 999
+            # Screen is resized.  Row text is built at full width and truncated
+            # by listbox.draw(), so a resize needs no rebuild.  Anyone adding a
+            # width-aware column has to revisit this
+            needs_repaint = True
             screen_size = BoxSize(*screen.getmaxyx())
             if config.kiosk:
                 lb.resize(screen_size.height - 1, screen_size.length)
@@ -717,7 +724,7 @@ def runner(screen, config):
             updateStatus(screen, "refreshed")
 
         while poll(config):
-            update_ui = 999
+            needs_rebuild = True
             updateStatus(screen, "Polling")
 
         updateStatus(screen, "ch:{:3}".format(x))
@@ -731,19 +738,19 @@ def runner(screen, config):
             return
 
         elif x == curses.KEY_UP:
-            update_ui = 999
+            needs_repaint = True
             # Move up one element in list
             if lb.active_element > 0:
                 lb.active_element -= 1
 
         elif x == curses.KEY_DOWN:
-            update_ui = 999
+            needs_repaint = True
             # Move down one element in list
             if lb.active_element < len(lb) - 1:
                 lb.active_element += 1
 
         elif x == curses.KEY_NPAGE:
-            update_ui = 999
+            needs_repaint = True
             a = lb.active_element + lb.pagesize
             if a < len(lb) - 1:
                 lb.active_element = a
@@ -751,7 +758,7 @@ def runner(screen, config):
                 lb.active_element = len(lb) - 1
 
         elif x == curses.KEY_PPAGE:
-            update_ui = 999
+            needs_repaint = True
             a = lb.active_element - lb.pagesize
             if a > 0:
                 lb.active_element = a
@@ -767,7 +774,7 @@ def runner(screen, config):
         elif x == ord("f"):
             # Change Filter
             uiSimpleFilterWindow(screen, config.UTF8)
-            update_ui = 999
+            needs_rebuild = True
             lb.active_element = 0
 
         elif x == ord("m"):
@@ -778,7 +785,7 @@ def runner(screen, config):
                 uiCFlapCases([lb.active.id])
 
         elif x == ord("x"):
-            update_ui = 999
+            needs_rebuild = True
             selection_time = time.time()
 
             # (de)select a element
@@ -788,7 +795,7 @@ def runner(screen, config):
                 cases_selected.append(lb.active.id)
 
         elif x == ord("X"):
-            update_ui = 999
+            needs_rebuild = True
             cases_tmp = list(cases_selected)
             cases_selected.clear()
             for case in cases_selected_last:
@@ -799,12 +806,12 @@ def runner(screen, config):
             cases_selected_last.extend(cases_tmp)
 
         elif x == ord("c"):
-            update_ui = 999
+            needs_rebuild = True
             # Clear selection
             cases_selected.clear()
 
         elif x == ord("u"):
-            update_ui = 999
+            needs_rebuild = True
             # Update selected cases
             if cases_selected:
                 uiUpdateCases(screen, cases_selected, config.UTF8)
@@ -812,7 +819,7 @@ def runner(screen, config):
                 uiUpdateCases(screen, [lb.active.id], config.UTF8)
 
         elif x == ord("U"):
-            update_ui = 999
+            needs_rebuild = True
             # Update selected cases
             if cases_selected:
                 uiUpdateCases(screen, cases_selected, config.UTF8)
@@ -822,7 +829,7 @@ def runner(screen, config):
                 uiSetState(screen, [lb.active.id], config)
 
         elif x == ord("i"):
-            update_ui = 999
+            needs_rebuild = True
             # Update selected cases
             if "{id" in table_structure:
                 table_structure = table_structure_no_id
@@ -830,7 +837,7 @@ def runner(screen, config):
                 table_structure = table_structure_id
 
         elif x == ord("s"):
-            update_ui = 999
+            needs_rebuild = True
             # Update selected cases
             if cases_selected:
                 uiSetState(screen, cases_selected, config)
@@ -838,7 +845,7 @@ def runner(screen, config):
                 uiSetState(screen, [lb.active.id], config)
 
         elif x == ord("y"):
-            update_ui = 999
+            needs_rebuild = True
             cases_to_delete = []
             for id in cases:
                 if cases[id].state == caseState.CLOSED:
@@ -853,37 +860,45 @@ def runner(screen, config):
                 lb.active_element = len(visible_cases) - 1
 
         elif x == ord("1"):
-            update_ui = 999
+            # A plugin is handed the live case object and may change it
+            needs_rebuild = True
             actionPlugin(screen, lb.active.id)
 
         elif x == ord("="):
-            update_ui = 999
+            needs_repaint = True
             uiShowAttr(screen, lb.active.id, config)
 
         elif x == curses.KEY_ENTER or x == 10 or x == 13:  # [ENTER], CR or LF
-            update_ui = 999
+            needs_repaint = True
             uiShowHistory(screen, lb.active.id, config)
 
         elif x == ord("l"):
             # [ENTER], CR or LF
-            update_ui = 999
+            needs_repaint = True
             uiShowLog(screen, lb.active.id, config)
 
         elif x == 12:
             # CTRL + L
-            update_ui = 999
+            needs_repaint = True
 
         if cases_selected:
             if time.time() - selection_time > 300:
                 cases_selected_last.clear()
                 cases_selected_last.extend(cases_selected)
                 cases_selected.clear()
-                update_ui = 999
+                needs_rebuild = True
 
-        if time.time() - update_ui > 10:
-            update_ui = time.time()
+        # Rebuilding the case list is O(number of cases); repainting is only
+        # O(visible rows).  Cursor movement changes neither the sort order nor
+        # any row's text, so it must never trigger a rebuild.
+        if needs_rebuild or time.time() - last_rebuild > CASE_LIST_MAX_AGE:
+            last_rebuild = time.time()
+            needs_rebuild = False
+            needs_repaint = True
             create_case_list(config)
-            lb.draw()
+
+        if needs_repaint:
+            needs_repaint = False
             draw(screen, config.Server)
 
         if time.time() - keepalive > 60:
@@ -954,7 +969,6 @@ def uiSetState(screen, caseids, config):
         cases_selected_last.clear()
         cases_selected_last.extend(cases_selected)
         cases_selected.clear()
-        create_case_list(config)
 
 
 def uiSetStateWindow(screen, number, config):
