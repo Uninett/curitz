@@ -8,9 +8,9 @@ description = "Python ncurses terminal client to Zino"
 authors = [{name="Runar Borge", email="runar.borge@sikt.no"}]
 maintainers = [{name="Uninett Opensource", email="opensource@uninett.no"}]
 readme = "README.rst"
-requires-python = ">=3.7"
+requires-python = ">=3.11"
 dependencies = [
-    "zinolib>=0.10.1,<1.0",
+    "zinolib>=1.3.4",
     "dnspython",
 ]
 license = {file="LICENSE"}
@@ -18,12 +18,10 @@ classifiers = [
     "Intended Audience :: Information Technology",
     "Intended Audience :: System Administrators",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: System :: Monitoring",
 ]
 dynamic = ["version"]
@@ -37,6 +35,7 @@ test = [
     "mypy",
     "flake8",
     "coverage",
+    "pytest",
 ]
 
 [tool.setuptools]

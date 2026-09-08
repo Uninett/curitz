@@ -79,8 +79,9 @@ Run ``curitz -h`` for info about the available arguments.
 Testing
 =======
 
-This library is testable with unittests. When testing it starts a Zino emulator
-that reponds correctly to requests as the real server would do.
+The test suite is run with pytest. It does not talk to a Zino server: it covers
+argument parsing, config-file handling and other pure-Python helpers only, so
+changes to the protocol layer need testing against a real server.
 
 If you have all currently supported pythons in your path, you can test them
 all, with an HTML coverage report placed in ``htmlcov/``::
