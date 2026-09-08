@@ -703,6 +703,9 @@ def runner(screen, config):
     draw(screen, config.Server)
 
     last_rebuild = time.time()
+    # needs_rebuild means "rebuild the case list, then repaint": a rebuild
+    # always implies a repaint, so no handler needs to ask for both.
+    # needs_repaint on its own means "repaint only", which is O(visible rows).
     needs_rebuild = False
     needs_repaint = False
     keepalive = time.time()
@@ -894,7 +897,7 @@ def runner(screen, config):
         if needs_rebuild or time.time() - last_rebuild > CASE_LIST_MAX_AGE:
             last_rebuild = time.time()
             needs_rebuild = False
-            needs_repaint = True
+            needs_repaint = True  # a rebuilt list is worthless unless drawn
             create_case_list(config)
 
         if needs_repaint:
