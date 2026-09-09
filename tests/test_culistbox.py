@@ -45,13 +45,38 @@ class TestActiveElement:
 
         assert box.active_element == 9
 
-    def test_when_the_list_is_emptied_under_it_it_should_be_zero(self):
+    def test_when_the_list_is_rebuilt_under_it_it_should_return_to_the_same_row(self):
         box = make_listbox(rows=100)
         box.active_element = 50
 
-        box.elements = []
+        rebuild(box, rows=100)
+
+        assert box.active_element == 50
+
+    def test_when_a_rebuild_leaves_fewer_rows_it_should_clamp_to_the_last_one(self):
+        box = make_listbox(rows=100)
+        box.active_element = 50
+
+        rebuild(box, rows=10)
+
+        assert box.active_element == 9
+
+    def test_when_the_list_is_cleared_it_should_be_zero(self):
+        box = make_listbox(rows=100)
+        box.active_element = 50
+
+        box.clear()
 
         assert box.active_element == 0
+
+    def test_when_a_rebuild_shrinks_the_list_it_should_not_drift_when_rows_return(self):
+        box = make_listbox(rows=100)
+        box.active_element = 50
+
+        rebuild(box, rows=10)
+        rebuild(box, rows=100)
+
+        assert box.active_element == 9
 
 
 class TestActive:
@@ -90,6 +115,16 @@ class TestLastRowIndex:
 
     def test_when_the_list_has_rows_it_should_index_the_final_one(self):
         assert make_listbox(rows=7).last_row_index == 6
+
+
+def rebuild(box, rows):
+    """Replace the box' rows, the way create_case_list() does.
+
+    :param box: the listbox to rebuild
+    :param rows: number of rows to refill it with
+    :return: None
+    """
+    box.set_elements(make_rows(rows))
 
 
 def make_rows(count):

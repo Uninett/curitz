@@ -124,9 +124,9 @@ class listbox:
         """Index of the row the cursor is on.
 
         Never points past the end of the current list, so a list that shrinks
-        under the cursor cannot leave it invalid.  The clamp is deliberately not
-        written back, so a row list that is replaced wholesale keeps the cursor
-        where the operator put it.
+        under the cursor cannot leave it invalid.  Rebuilds go through
+        set_elements(), which is what carries the cursor across them; the clamp
+        here is what makes any other mutation of the row list safe.
 
         :return: the cursor position, or 0 while the list is empty
         """
@@ -151,11 +151,30 @@ class listbox:
             return None
         return self.elements[self.active_element]
 
+    def set_elements(self, elements) -> None:
+        """Replace every row, keeping the cursor on the row it was on.
+
+        The cursor is clamped as the rows are replaced, so a rebuild that
+        returns the same rows leaves it exactly where the operator put it, and
+        one that returns fewer moves it no further up than it has to, without
+        remembering a row that no longer exists.
+
+        :param elements: the rows to display
+        :return: None
+        """
+        self.elements = list(elements)
+        self.active_element = self._active_element
+
     def add(self, element: BoxElement):
         self.elements.append(element)
 
-    def clear(self):
+    def clear(self) -> None:
+        """Remove every row, and with it the cursor position.
+
+        :return: None
+        """
         self.elements = []
+        self.active_element = 0
 
     def resize(self, nlines, ncols):
         self.box.resize(nlines, ncols)
