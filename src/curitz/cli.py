@@ -742,31 +742,19 @@ def runner(screen, config):
 
         elif x == curses.KEY_UP:
             needs_repaint = True
-            # Move up one element in list
-            if lb.active_element > 0:
-                lb.active_element -= 1
+            lb.go_one_row_up()
 
         elif x == curses.KEY_DOWN:
             needs_repaint = True
-            # Move down one element in list
-            if lb.active_element < len(lb) - 1:
-                lb.active_element += 1
+            lb.go_one_row_down()
 
         elif x == curses.KEY_NPAGE:
             needs_repaint = True
-            a = lb.active_element + lb.pagesize
-            if a < len(lb) - 1:
-                lb.active_element = a
-            else:
-                lb.active_element = len(lb) - 1
+            lb.go_one_page_down()
 
         elif x == curses.KEY_PPAGE:
             needs_repaint = True
-            a = lb.active_element - lb.pagesize
-            if a > 0:
-                lb.active_element = a
-            else:
-                lb.active_element = 0
+            lb.go_one_page_up()
 
         elif x == ord("p"):
             if cases_selected:
@@ -857,10 +845,6 @@ def runner(screen, config):
                 cases.pop(id, None)
                 if id in cases_selected:
                     cases_selected.remove(id)
-            if lb.active_element >= len(visible_cases):
-                # If the current active element is beyond the item list end
-                # then move it to the last visible element
-                lb.active_element = len(visible_cases) - 1
 
         elif x == ord("1"):
             # A plugin is handed the live case object and may change it
