@@ -304,6 +304,11 @@ def uiShowHistory(screen, caseid, config):
     global cases
     lines = []
     updateStatus(screen, "Waiting...")
+    try:
+        case = cases[caseid]
+    except IndexError:
+        # no cases, caseid might have been purged
+        return
     for line in cases[caseid].history:
         lines.append("{} {}".format(line["date"], line["header"]))
         for _line in line["log"]:
@@ -732,6 +737,16 @@ def runner(screen, config):
 
         updateStatus(screen, "ch:{:3}".format(x))
 
+        # Move active_element up the list until we find an existing element
+        while True:
+            try:
+                lb.active.id
+                update_ui = 999
+                break
+            except (AttributeError, KeyError):
+                if lb.active_element > 0:
+                    lb.active_element -= 1
+
         if x == -1:
             # Nothing happened, check for changes
             pass
@@ -873,7 +888,11 @@ def runner(screen, config):
 
         elif x == curses.KEY_ENTER or x == 10 or x == 13:  # [ENTER], CR or LF
             needs_repaint = True
-            uiShowHistory(screen, lb.active.id, config)
+            try:
+                uiShowHistory(screen, lb.active.id, config)
+            except IndexError:
+                # empty case list or current active element has been deleted
+                pass
 
         elif x == ord("l"):
             # [ENTER], CR or LF
