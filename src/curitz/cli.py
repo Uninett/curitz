@@ -684,6 +684,10 @@ def runner(screen, config):
     screen.clear()
     screen.refresh()
 
+    # Every case that is going to arrive has arrived, so from here on an empty
+    # list means the filter matched nothing, not that we are still loading
+    lb.empty_message = "Nothing to display"
+
     create_case_list(config)
     draw(screen, config.Server)
 
