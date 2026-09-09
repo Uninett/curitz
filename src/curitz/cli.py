@@ -803,10 +803,21 @@ def runner(screen, config):
             selection_time = time.time()
 
             # (de)select a element
-            if lb.active.id in cases_selected:
-                cases_selected.remove(lb.active.id)
-            else:
-                cases_selected.append(lb.active.id)
+            toggle_selection(lb.active.id, cases_selected)
+
+        elif x == ord("*"):
+            needs_rebuild = True
+            selection_time = time.time()
+
+            # (de)select an element, then advance the cursor the same way the
+            # operator last moved it, so a run of marks needs no arrow keys
+            toggle_selection(lb.active.id, cases_selected)
+            # XXX duplicates the bounds checks in the KEY_UP/KEY_DOWN branches;
+            # folds into the listbox cursor methods of #3
+            if move_direction == MOVE_UP and lb.active_element > 0:
+                lb.active_element -= 1
+            elif move_direction == MOVE_DOWN and lb.active_element < len(lb) - 1:
+                lb.active_element += 1
 
         elif x == ord("X"):
             needs_rebuild = True
@@ -920,6 +931,19 @@ def runner(screen, config):
             updateStatus(screen, "Sending keepalive")
             doKeepalive()
             updateStatus(screen, "")
+
+
+def toggle_selection(caseid: int, selection: list[int]) -> None:
+    """Add a case to the selection, or remove it if it is already there.
+
+    :param caseid: the id of the case to toggle
+    :param selection: the list of selected case ids, modified in place
+    :return: None
+    """
+    if caseid in selection:
+        selection.remove(caseid)
+    else:
+        selection.append(caseid)
 
 
 def draw(screen, server):
