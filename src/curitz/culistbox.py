@@ -16,6 +16,8 @@ class listbox:
     https://stackoverflow.com/questions/30828804/how-to-make-a-scrolling-menu-in-python-curses
     """
 
+    _active_element = 0
+
     def __init__(
         self,
         nlines,
@@ -32,10 +34,9 @@ class listbox:
         self.heading = ""
         self.arrow = current_selected_arrow
 
+        self.elements: list[BoxElement | str] = []
         self.active_element = 0
         self.lr_border = lr_border
-
-        self.elements = []  # Type: List[BoxElement]
 
     @property
     def pagesize(self):
@@ -100,7 +101,7 @@ class listbox:
                                 self.size.length - 2
                             ),
                         ),
-                        *c
+                        *c,
                     )
 
                     if (
@@ -114,7 +115,40 @@ class listbox:
         return len(self.elements)
 
     @property
+    def last_row_index(self):
+        """Index of the final row, or -1 while the list is empty."""
+        return len(self) - 1
+
+    @property
+    def active_element(self):
+        """Index of the row the cursor is on.
+
+        Never points past the end of the current list, so a list that shrinks
+        under the cursor cannot leave it invalid.  The clamp is deliberately not
+        written back, so a row list that is replaced wholesale keeps the cursor
+        where the operator put it.
+
+        :return: the cursor position, or 0 while the list is empty
+        """
+        if not self.elements:
+            return 0
+        return min(self._active_element, self.last_row_index)
+
+    @active_element.setter
+    def active_element(self, index):
+        self._active_element = max(min(index, self.last_row_index), 0)
+
+    @property
     def active(self):
+        """The element the cursor is on.
+
+        Elements are BoxElements or, in the boxes built by the popup windows,
+        plain strings.
+
+        :return: the active element, or None while the list is empty
+        """
+        if not self.elements:
+            return None
         return self.elements[self.active_element]
 
     def add(self, element: BoxElement):
@@ -122,12 +156,6 @@ class listbox:
 
     def clear(self):
         self.elements = []
-
-    def select_next(self):
-        pass
-
-    def select_prev(self):
-        pass
 
     def resize(self, nlines, ncols):
         self.box.resize(nlines, ncols)
