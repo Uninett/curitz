@@ -37,9 +37,52 @@ class listbox:
 
         self.elements = []  # Type: List[BoxElement]
 
+    def __len__(self):
+        return len(self.elements)
+
+    @property
+    def active(self):
+        return self.elements[self.active_element]
+
+    @property
+    def last_row_index(self):
+        return len(self) - 1
+
     @property
     def pagesize(self):
         return self.size.height - 2
+
+    def go_one_row_up(self):
+        needs_repaint, needs_rebuild = True, False
+        if self.active_element > 0:
+            self.active_element -= 1
+            return needs_repaint, needs_rebuild
+        return self.go_one_page_up()
+
+    def go_one_row_down(self):
+        needs_repaint, needs_rebuild = True, False
+        if self.active_element < self.last_row_index:
+            self.active_element += 1
+            return needs_repaint, needs_rebuild
+        return self.go_one_page_down()
+
+    def go_one_page_up(self):
+        needs_repaint, needs_rebuild = True, False
+        next_active_element = self.active_element - self.pagesize
+        if next_active_element > 0:
+            self.active_element = next_active_element
+        else:
+            self.active_element = 0
+        return needs_repaint, needs_rebuild
+
+    def go_one_page_down(self):
+        needs_repaint, needs_rebuild = True, False
+        next_active_element = self.active_element + self.pagesize
+        if next_active_element < self.last_row_index:
+            self.active_element = next_active_element
+        else:
+            self.active_element = self.last_row_index
+        return needs_repaint, needs_rebuild
 
     def draw(self):
         self.box.erase()
@@ -104,18 +147,11 @@ class listbox:
                     )
 
                     if (
-                        i == len(self) - 1
+                        i == self.last_row_index
                     ):  # Len(self) returns the current length of the list
                         break
 
         self.box.noutrefresh()
-
-    def __len__(self):
-        return len(self.elements)
-
-    @property
-    def active(self):
-        return self.elements[self.active_element]
 
     def add(self, element: BoxElement):
         self.elements.append(element)
