@@ -67,7 +67,6 @@ table_structure_id = (
 table_structure = table_structure_no_id
 
 cases = {}  # type: ignore
-visible_cases = []
 cases_selected = []
 cases_selected_last = []  # type: ignore
 
@@ -473,11 +472,11 @@ def sortCases(casedict, field="lasttrans", filter=""):
 
 
 def create_case_list(config):
-    global cases, visible_cases, lb, cases_selected, casefilter
+    global cases, lb, cases_selected, casefilter
     visible_cases = cases.keys()
     sorted_cases = sortCases(cases, field="updated", filter=casefilter)
 
-    lb.clear()
+    rows = []
     lb.heading = table_structure.format(
         id="  ID",
         selected="S",
@@ -532,7 +531,7 @@ def create_case_list(config):
                         "lowerLayerDown",
                     ] and case.state in [caseState.WORKING, caseState.WAITING]:
                         color = cYellow
-                    lb.add(
+                    rows.append(
                         BoxElement(
                             case.id,
                             table_structure.format(
@@ -556,7 +555,7 @@ def create_case_list(config):
                         caseState.WAITING,
                     ]:
                         color = cYellow
-                    lb.add(
+                    rows.append(
                         BoxElement(
                             case.id,
                             table_structure.format(
@@ -589,7 +588,7 @@ def create_case_list(config):
                         port = case.bfdaddr
                     except Exception:
                         port = "ix {}".format(case.bfdix)
-                    lb.add(
+                    rows.append(
                         BoxElement(
                             case.id,
                             table_structure.format(
@@ -618,7 +617,7 @@ def create_case_list(config):
                         caseState.WAITING,
                     ]:
                         color = cYellow
-                    lb.add(
+                    rows.append(
                         BoxElement(
                             case.id,
                             table_structure.format(
@@ -642,7 +641,7 @@ def create_case_list(config):
                         caseState.WAITING,
                     ]:
                         color = cYellow
-                    lb.add(
+                    rows.append(
                         BoxElement(
                             case.id,
                             table_structure.format(
@@ -663,6 +662,8 @@ def create_case_list(config):
                 )
                 log.fatal(repr(case._attrs))
                 raise
+
+    lb.set_elements(rows)
 
 
 def doKeepalive():
