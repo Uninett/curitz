@@ -988,6 +988,8 @@ def uiCFlapCases(caseids):
 
 
 def uiUpdateCases(screen, caseids, utf8=False):
+    if not caseids:
+        return
     update = uiUpdateCaseWindow(screen, len(caseids), utf8)
     if update:
         for case in caseids:
@@ -995,6 +997,8 @@ def uiUpdateCases(screen, caseids, utf8=False):
 
 
 def uiSetState(screen, caseids, config):
+    if not caseids:
+        return
     new_state = uiSetStateWindow(screen, len(caseids), config)
     if new_state:
         for case in caseids:
