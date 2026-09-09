@@ -970,7 +970,7 @@ def draw(screen, server):
     screen.addstr(
         screen_size.height - 1,
         0,
-        "<ENTER>=Show history  <UP/DOWN>=Navigate q=Quit  l=Show Logs   x=(de)select  c=Clear selection"[
+        "<ENTER>=Show history <UP/DOWN>=Navigate q=Quit l=Show Logs x=(de)select *=(de)select+move c=Clear selection"[
             : screen_size.length - 1
         ],
     )  # noqa
