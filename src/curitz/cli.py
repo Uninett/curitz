@@ -177,28 +177,16 @@ def uiShowLogWindow(screen, heading, lines, config):
         if x == -1:
             pass
         elif x == curses.KEY_UP:
-            # Move up one element in list
-            if box.active_element > 0:
-                box.active_element -= 1
+            box.go_one_row_up()
 
         elif x == curses.KEY_DOWN:
-            # Move down one element in list
-            if box.active_element < len(lines) - 1:
-                box.active_element += 1
+            box.go_one_row_down()
 
         elif x == curses.KEY_NPAGE:
-            a = box.active_element + box.pagesize
-            if a < len(box) - 1:
-                box.active_element = a
-            else:
-                box.active_element = len(lines) - 1
+            box.go_one_page_down()
 
         elif x == curses.KEY_PPAGE:
-            a = box.active_element - box.pagesize
-            if a > 0:
-                box.active_element = a
-            else:
-                box.active_element = 0
+            box.go_one_page_up()
         else:
             return
         box.draw()
@@ -267,14 +255,10 @@ def actionPlugin(screen, caseid):
             if x == -1:
                 pass
             elif x == curses.KEY_UP:
-                # Move up one element in list
-                if box.active_element > 0:
-                    box.active_element -= 1
+                box.go_one_row_up()
 
             elif x == curses.KEY_DOWN:
-                # Move down one element in list
-                if box.active_element < len(box) - 1:
-                    box.active_element += 1
+                box.go_one_row_down()
 
             elif x == curses.KEY_ENTER or x == 13 or x == 10:
                 if not pkeys:
@@ -1030,14 +1014,10 @@ def uiSetStateWindow(screen, number, config):
             if x == -1:
                 pass
             elif x == curses.KEY_UP:
-                # Move up one element in list
-                if box.active_element > 0:
-                    box.active_element -= 1
+                box.go_one_row_up()
 
             elif x == curses.KEY_DOWN:
-                # Move down one element in list
-                if box.active_element < len(box) - 1:
-                    box.active_element += 1
+                box.go_one_row_down()
 
             elif x == ord("o") or x == ord("O"):
                 box.active_element = 1
