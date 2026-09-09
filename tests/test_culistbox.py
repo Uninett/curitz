@@ -37,10 +37,11 @@ class TestActiveElement:
 
         assert box.active_element == 9
 
-    def test_when_set_past_the_end_it_should_not_move_when_rows_arrive(self):
+    def test_when_moved_past_the_end_it_should_not_move_when_rows_arrive(self):
         box = make_listbox(rows=10)
+        box.active_element = 9
 
-        box.active_element = 99
+        box.go_one_row_down()
         box.add(BoxElement(10, "a new case", []))
 
         assert box.active_element == 9
@@ -107,6 +108,89 @@ class TestActive:
         del box.elements[10:]
 
         assert box.active.id == 9
+
+
+class TestGoOneRowUp:
+    def test_when_it_is_on_the_first_row_it_should_stay_there(self):
+        box = make_listbox(rows=10)
+
+        box.go_one_row_up()
+
+        assert box.active_element == 0
+
+    def test_when_it_is_further_down_it_should_move_up_one_row(self):
+        box = make_listbox(rows=10)
+        box.active_element = 4
+
+        box.go_one_row_up()
+
+        assert box.active_element == 3
+
+    def test_when_the_list_is_empty_it_should_leave_the_cursor_at_zero(self):
+        box = make_listbox(rows=0)
+
+        box.go_one_row_up()
+
+        assert box.active_element == 0
+
+
+class TestGoOneRowDown:
+    def test_when_it_is_on_the_last_row_it_should_stay_there(self):
+        box = make_listbox(rows=10)
+        box.active_element = 9
+
+        box.go_one_row_down()
+
+        assert box.active_element == 9
+
+    def test_when_it_is_further_up_it_should_move_down_one_row(self):
+        box = make_listbox(rows=10)
+
+        box.go_one_row_down()
+
+        assert box.active_element == 1
+
+    def test_when_the_list_is_empty_it_should_leave_the_cursor_at_zero(self):
+        box = make_listbox(rows=0)
+
+        box.go_one_row_down()
+
+        assert box.active_element == 0
+
+
+class TestGoOnePageUp:
+    def test_when_a_full_page_is_above_the_cursor_it_should_move_a_page(self):
+        box = make_listbox(rows=100, height=12)  # a page is 10 rows
+        box.active_element = 50
+
+        box.go_one_page_up()
+
+        assert box.active_element == 40
+
+    def test_when_less_than_a_page_is_above_the_cursor_it_should_stop_at_the_top(self):
+        box = make_listbox(rows=100, height=12)
+        box.active_element = 3
+
+        box.go_one_page_up()
+
+        assert box.active_element == 0
+
+
+class TestGoOnePageDown:
+    def test_when_a_full_page_is_below_the_cursor_it_should_move_a_page(self):
+        box = make_listbox(rows=100, height=12)  # a page is 10 rows
+
+        box.go_one_page_down()
+
+        assert box.active_element == 10
+
+    def test_when_less_than_a_page_is_below_the_cursor_it_should_stop_at_the_end(self):
+        box = make_listbox(rows=100, height=12)
+        box.active_element = 97
+
+        box.go_one_page_down()
+
+        assert box.active_element == 99
 
 
 class TestLastRowIndex:

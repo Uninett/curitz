@@ -151,6 +151,22 @@ class listbox:
             return None
         return self.elements[self.active_element]
 
+    def go_one_row_up(self) -> None:
+        """Move the cursor one row towards the top of the list."""
+        self.active_element -= 1
+
+    def go_one_row_down(self) -> None:
+        """Move the cursor one row towards the bottom of the list."""
+        self.active_element += 1
+
+    def go_one_page_up(self) -> None:
+        """Move the cursor one screenful towards the top of the list."""
+        self.active_element -= self.pagesize
+
+    def go_one_page_down(self) -> None:
+        """Move the cursor one screenful towards the bottom of the list."""
+        self.active_element += self.pagesize
+
     def set_elements(self, elements) -> None:
         """Replace every row, keeping the cursor on the row it was on.
 
