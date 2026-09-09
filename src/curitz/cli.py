@@ -34,6 +34,10 @@ DEFAULT_PROFILE = "default"
 # the age and downtime columns keep ticking
 CASE_LIST_MAX_AGE = 10
 
+# Directions the listbox cursor can move in
+MOVE_UP = -1
+MOVE_DOWN = 1
+
 
 # Hotfix to fix OSX reporting only "UTF-8" on LC_CTYPE
 try:
@@ -710,6 +714,9 @@ def runner(screen, config):
     needs_repaint = False
     keepalive = time.time()
     selection_time = time.time()
+    # Direction of the last cursor movement, used by the "*" toggle to decide
+    # which way to advance afterwards.
+    move_direction = MOVE_DOWN
 
     while True:
         x = screen.getch()
@@ -743,17 +750,20 @@ def runner(screen, config):
         elif x == curses.KEY_UP:
             needs_repaint = True
             # Move up one element in list
+            move_direction = MOVE_UP
             if lb.active_element > 0:
                 lb.active_element -= 1
 
         elif x == curses.KEY_DOWN:
             needs_repaint = True
             # Move down one element in list
+            move_direction = MOVE_DOWN
             if lb.active_element < len(lb) - 1:
                 lb.active_element += 1
 
         elif x == curses.KEY_NPAGE:
             needs_repaint = True
+            move_direction = MOVE_DOWN
             a = lb.active_element + lb.pagesize
             if a < len(lb) - 1:
                 lb.active_element = a
@@ -762,6 +772,7 @@ def runner(screen, config):
 
         elif x == curses.KEY_PPAGE:
             needs_repaint = True
+            move_direction = MOVE_UP
             a = lb.active_element - lb.pagesize
             if a > 0:
                 lb.active_element = a
