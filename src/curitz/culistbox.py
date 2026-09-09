@@ -18,6 +18,11 @@ class listbox:
 
     _active_element = 0
 
+    # Shown in place of the rows when there are none.  Left empty by default:
+    # a box with nothing in it yet is not the same as one with nothing to show,
+    # and only the owner of the box knows which of the two it is looking at.
+    empty_message = ""
+
     def __init__(
         self,
         nlines,
@@ -60,54 +65,55 @@ class listbox:
             self.box.border()
         self.box.addstr(0, 1, self.heading)
 
-        # Get current page
-        page = self.active_element // self.pagesize
-        page_start = self.pagesize * page
+        if self.pagesize < 1:
+            # The box is too short to hold a single row
+            self.box.noutrefresh()
+            return
 
-        if len(self.elements) > 0:  # Allow us to draw a empty listobx
-            # Run until screen is full of elements or we are at the bottom of list
-            for i in range(page_start, self.pagesize + page_start):
-                if isinstance(self.elements[i], BoxElement):
-                    curr_element = self.elements[i]
-                elif isinstance(self.elements[i], str):
-                    curr_element = BoxElement(i, self.elements[i], [])
+        if not self.elements:
+            if self.empty_message:
+                self.box.addstr(1, 1, self.empty_message, self.highlightText)
+            self.box.noutrefresh()
+            return
+
+        page_number = self.active_element // self.pagesize
+        page_start, page_end = get_pagination_indexes(self.pagesize, page_number)
+        # Draw from a copy of the page.  Slicing also bounds the loop for us, so
+        # a page that is short because the list ends mid-way just draws fewer
+        # rows instead of running off the end of the list.
+        for row, element in enumerate(self.elements[page_start:page_end]):
+            index = page_start + row
+
+            if isinstance(element, BoxElement):
+                curr_element = element
+            elif isinstance(element, str):
+                curr_element = BoxElement(index, element, [])
+            else:
+                raise ValueError("LogLine is not a string or BoxElement")
+
+            ar = ""
+            c = curr_element.font_args if curr_element.font_args else [self.normalText]
+            start_at = 1
+            if index == self.active_element:
+                # This is the current active element
+                if self.arrow:
+                    ar = self.arrow
+                    start_at = 0
                 else:
-                    raise ValueError("LogLine is not a string or BoxElement")
-                if len(self.elements) == 0:
-                    self.box.addstr(1, 1, "Nothing to display", self.highlightText)
-                else:
-                    ar = ""
-                    c = (
-                        curr_element.font_args
-                        if curr_element.font_args
-                        else [self.normalText]
-                    )
-                    start_at = 1
-                    if i + page_start == self.active_element + page_start:
-                        # This is the current active element
-                        if self.arrow:
-                            ar = self.arrow
-                            start_at = 0
-                        else:
-                            c = [self.highlightText]
-                    # Print the line
+                    c = [self.highlightText]
+            # Print the line
 
-                    self.box.addstr(
-                        i + 1 - page_start,
-                        start_at,
-                        "{}{}".format(
-                            ar,
-                            (curr_element.text)[0 : self.size.length - 2].ljust(
-                                self.size.length - 2
-                            ),
-                        ),
-                        *c,
-                    )
-
-                    if (
-                        i == len(self) - 1
-                    ):  # Len(self) returns the current length of the list
-                        break
+            self.box.addstr(
+                row + 1,
+                start_at,
+                "{}{}".format(
+                    ar,
+                    (curr_element.text)[0 : self.size.length - 2].ljust(
+                        self.size.length - 2
+                    ),
+                ),
+                *c,
+            )
 
         self.box.noutrefresh()
 
@@ -195,3 +201,15 @@ class listbox:
     def resize(self, nlines, ncols):
         self.box.resize(nlines, ncols)
         self.size = BoxSize(*self.box.getmaxyx())
+
+
+def get_pagination_indexes(page_size, page_number):
+    """Find the slice bounds of a page.
+
+    :param page_size: number of rows on a page
+    :param page_number: zero-based number of the page wanted
+    :return: the (start, end) indexes to slice the element list with
+    """
+    start_index = page_size * page_number
+    end_index = start_index + page_size
+    return start_index, end_index
