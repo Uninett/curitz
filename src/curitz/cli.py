@@ -34,6 +34,10 @@ DEFAULT_PROFILE = "default"
 # the age and downtime columns keep ticking
 CASE_LIST_MAX_AGE = 10
 
+# Directions the listbox cursor can move in
+MOVE_UP = -1
+MOVE_DOWN = 1
+
 
 # Hotfix to fix OSX reporting only "UTF-8" on LC_CTYPE
 try:
@@ -710,6 +714,9 @@ def runner(screen, config):
     needs_repaint = False
     keepalive = time.time()
     selection_time = time.time()
+    # Direction of the last cursor movement, used by the "*" toggle to decide
+    # which way to advance afterwards.
+    move_direction = MOVE_DOWN
 
     while True:
         x = screen.getch()
@@ -743,17 +750,20 @@ def runner(screen, config):
         elif x == curses.KEY_UP:
             needs_repaint = True
             # Move up one element in list
+            move_direction = MOVE_UP
             if lb.active_element > 0:
                 lb.active_element -= 1
 
         elif x == curses.KEY_DOWN:
             needs_repaint = True
             # Move down one element in list
+            move_direction = MOVE_DOWN
             if lb.active_element < len(lb) - 1:
                 lb.active_element += 1
 
         elif x == curses.KEY_NPAGE:
             needs_repaint = True
+            move_direction = MOVE_DOWN
             a = lb.active_element + lb.pagesize
             if a < len(lb) - 1:
                 lb.active_element = a
@@ -762,6 +772,7 @@ def runner(screen, config):
 
         elif x == curses.KEY_PPAGE:
             needs_repaint = True
+            move_direction = MOVE_UP
             a = lb.active_element - lb.pagesize
             if a > 0:
                 lb.active_element = a
@@ -792,10 +803,21 @@ def runner(screen, config):
             selection_time = time.time()
 
             # (de)select a element
-            if lb.active.id in cases_selected:
-                cases_selected.remove(lb.active.id)
-            else:
-                cases_selected.append(lb.active.id)
+            toggle_selection(lb.active.id, cases_selected)
+
+        elif x == ord("*"):
+            needs_rebuild = True
+            selection_time = time.time()
+
+            # (de)select an element, then advance the cursor the same way the
+            # operator last moved it, so a run of marks needs no arrow keys
+            toggle_selection(lb.active.id, cases_selected)
+            # XXX duplicates the bounds checks in the KEY_UP/KEY_DOWN branches;
+            # folds into the listbox cursor methods of #3
+            if move_direction == MOVE_UP and lb.active_element > 0:
+                lb.active_element -= 1
+            elif move_direction == MOVE_DOWN and lb.active_element < len(lb) - 1:
+                lb.active_element += 1
 
         elif x == ord("X"):
             needs_rebuild = True
@@ -911,6 +933,19 @@ def runner(screen, config):
             updateStatus(screen, "")
 
 
+def toggle_selection(caseid: int, selection: list[int]) -> None:
+    """Add a case to the selection, or remove it if it is already there.
+
+    :param caseid: the id of the case to toggle
+    :param selection: the list of selected case ids, modified in place
+    :return: None
+    """
+    if caseid in selection:
+        selection.remove(caseid)
+    else:
+        selection.append(caseid)
+
+
 def draw(screen, server):
 
     screen_size = BoxSize(*screen.getmaxyx())
@@ -935,7 +970,7 @@ def draw(screen, server):
     screen.addstr(
         screen_size.height - 1,
         0,
-        "<ENTER>=Show history  <UP/DOWN>=Navigate q=Quit  l=Show Logs   x=(de)select  c=Clear selection"[
+        "<ENTER>=Show history <UP/DOWN>=Navigate q=Quit l=Show Logs x=(de)select *=(de)select+move c=Clear selection"[
             : screen_size.length - 1
         ],
     )  # noqa
