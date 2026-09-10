@@ -1062,6 +1062,17 @@ def uiUpdateCaseWindow(screen, number, utf8=False):
     return text
 
 
+def uiShowFilterErrorWindow(screen, error):
+    box = curses.newwin(9, 62, 4+9+1, 9)
+    box.box()
+    box.addstr(0, 1, "Error! Invalid filter!")
+    box.addstr(2, 2, "This looks like a broken regular expression:")
+    box.addstr(4, 6, casefilter)
+    box.addstr(6, 6, str(error))
+    box.addstr(8, 1, "Fix/remove filter and press ENTER to close this window")
+    box.refresh()
+
+
 def uiSimpleFilterWindow(screen, utf8=False):
     global casefilter
     border = curses.newwin(9, 62, 4, 9)
@@ -1076,21 +1087,20 @@ def uiSimpleFilterWindow(screen, utf8=False):
     else:
         p = curses.textpad.Textbox(textbox)
 
-    try:
-        curses.curs_set(1)
-    except Exception:
-        pass
-    try:
-        text = p.edit()
-    except KeyboardInterrupt:
-        return ""
-    try:
-        curses.curs_set(0)
-    except Exception:
-        pass
+    safely_set_cursor_type(1)
+    while True:
+        try:
+            text = p.edit()
+        except KeyboardInterrupt:
+            break
+        casefilter = text.strip()
+        error = validate_filter(casefilter)
+        if not error:
+            log.debug(repr(casefilter))
+            break
+        uiShowFilterErrorWindow(screen, error)
 
-    casefilter = text.strip()
-    log.debug(repr(casefilter))
+    safely_set_cursor_type(0)
     return True
 
 
@@ -1237,6 +1247,20 @@ def read_config(filename):
     :raises FileNotFoundError: if the file does not exist
     """
     return tcl.parse(tcl.load(filename))
+
+
+def safely_set_cursor_type(type_):
+    try:
+        curses.curs_set(type_)
+    except Exception:
+        pass
+
+
+def validate_filter(casefilter):
+    try:
+        re.compile(casefilter, re.IGNORECASE)
+    except re.error as e:
+        return e
 
 
 if __name__ == "__main__":
