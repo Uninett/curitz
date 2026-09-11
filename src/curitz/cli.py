@@ -395,10 +395,7 @@ def uiloop(screen, config):
         sys.stderr.write("You need a color terminal to run cuRitz\n")
         return
 
-    try:
-        curses.curs_set(0)
-    except Exception:
-        pass
+    safely_set_cursor_type(0)
     screen_size = BoxSize(*screen.getmaxyx())
     if config.kiosk:
         lb = listbox(
@@ -432,6 +429,7 @@ def uiloop(screen, config):
 
 def sortCases(casedict, field="lasttrans", filter=""):
     cases_sorted = []
+    pattern = re.compile(filter, re.IGNORECASE)
     for key in sorted(
         cases,
         key=lambda k: (
@@ -439,35 +437,11 @@ def sortCases(casedict, field="lasttrans", filter=""):
             cases[k]._attrs[field],
         ),
     ):
-        show = False
-        if "type" in cases[key]._attrs:
-            if re.match(
-                ".*{}".format(filter), str(cases[key].get("type")), re.IGNORECASE
-            ):
-                show = True
-        if "state" in cases[key]._attrs:
-            if re.match(
-                ".*{}".format(filter), str(cases[key].get("state")), re.IGNORECASE
-            ):
-                show = True
-        if "router" in cases[key]._attrs:
-            if re.match(
-                ".*{}".format(filter), str(cases[key].get("router")), re.IGNORECASE
-            ):
-                show = True
-        if "descr" in cases[key]._attrs:
-            if re.match(
-                ".*{}".format(filter), str(cases[key].get("descr")), re.IGNORECASE
-            ):
-                show = True
-        if "port" in cases[key]._attrs:
-            if re.match(
-                ".*{}".format(filter), str(cases[key].get("port")), re.IGNORECASE
-            ):
-                show = True
-
-        if show:
-            cases_sorted.append(key)
+        for lookup in ("type", "state", "router",  "descr", "port"):
+            case = cases[key]
+            if lookup in case._attrs and pattern.search(str(case.get(lookup))):
+                cases_sorted.append(key)
+                break
 
     return reversed(cases_sorted)
 
@@ -1046,20 +1020,25 @@ def uiUpdateCaseWindow(screen, number, utf8=False):
     else:
         p = curses.textpad.Textbox(textbox)
 
-    try:
-        curses.curs_set(1)
-    except Exception:
-        pass
+    safely_set_cursor_type(1)
     try:
         text = p.edit()
     except KeyboardInterrupt:
         return ""
-    try:
-        curses.curs_set(0)
-    except Exception:
-        pass
+    safely_set_cursor_type(0)
 
     return text
+
+
+def uiShowFilterErrorWindow(screen, error):
+    box = curses.newwin(9, 62, 4+9+1, 9)
+    box.box()
+    box.addstr(0, 1, "Error! Invalid filter!")
+    box.addstr(2, 2, "This looks like a broken regular expression:")
+    box.addstr(4, 6, casefilter)
+    box.addstr(6, 6, str(error))
+    box.addstr(8, 1, "Fix/remove filter and press ENTER to close this window")
+    box.refresh()
 
 
 def uiSimpleFilterWindow(screen, utf8=False):
@@ -1076,21 +1055,20 @@ def uiSimpleFilterWindow(screen, utf8=False):
     else:
         p = curses.textpad.Textbox(textbox)
 
-    try:
-        curses.curs_set(1)
-    except Exception:
-        pass
-    try:
-        text = p.edit()
-    except KeyboardInterrupt:
-        return ""
-    try:
-        curses.curs_set(0)
-    except Exception:
-        pass
+    safely_set_cursor_type(1)
+    while True:
+        try:
+            text = p.edit()
+        except KeyboardInterrupt:
+            break
+        casefilter = text.strip()
+        error = validate_filter(casefilter)
+        if not error:
+            log.debug(repr(casefilter))
+            break
+        uiShowFilterErrorWindow(screen, error)
 
-    casefilter = text.strip()
-    log.debug(repr(casefilter))
+    safely_set_cursor_type(0)
     return True
 
 
@@ -1237,6 +1215,20 @@ def read_config(filename):
     :raises FileNotFoundError: if the file does not exist
     """
     return tcl.parse(tcl.load(filename))
+
+
+def safely_set_cursor_type(type_):
+    try:
+        curses.curs_set(type_)
+    except Exception:
+        pass
+
+
+def validate_filter(casefilter):
+    try:
+        re.compile(casefilter, re.IGNORECASE)
+    except re.error as e:
+        return e
 
 
 if __name__ == "__main__":
