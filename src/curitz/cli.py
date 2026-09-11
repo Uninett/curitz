@@ -395,10 +395,7 @@ def uiloop(screen, config):
         sys.stderr.write("You need a color terminal to run cuRitz\n")
         return
 
-    try:
-        curses.curs_set(0)
-    except Exception:
-        pass
+    safely_set_cursor_type(0)
     screen_size = BoxSize(*screen.getmaxyx())
     if config.kiosk:
         lb = listbox(
@@ -1023,18 +1020,12 @@ def uiUpdateCaseWindow(screen, number, utf8=False):
     else:
         p = curses.textpad.Textbox(textbox)
 
-    try:
-        curses.curs_set(1)
-    except Exception:
-        pass
+    safely_set_cursor_type(1)
     try:
         text = p.edit()
     except KeyboardInterrupt:
         return ""
-    try:
-        curses.curs_set(0)
-    except Exception:
-        pass
+    safely_set_cursor_type(0)
 
     return text
 
