@@ -432,6 +432,7 @@ def uiloop(screen, config):
 
 def sortCases(casedict, field="lasttrans", filter=""):
     cases_sorted = []
+    pattern = re.compile(filter, re.IGNORECASE)
     for key in sorted(
         cases,
         key=lambda k: (
@@ -439,35 +440,11 @@ def sortCases(casedict, field="lasttrans", filter=""):
             cases[k]._attrs[field],
         ),
     ):
-        show = False
-        if "type" in cases[key]._attrs:
-            if re.match(
-                ".*{}".format(filter), str(cases[key].get("type")), re.IGNORECASE
-            ):
-                show = True
-        if "state" in cases[key]._attrs:
-            if re.match(
-                ".*{}".format(filter), str(cases[key].get("state")), re.IGNORECASE
-            ):
-                show = True
-        if "router" in cases[key]._attrs:
-            if re.match(
-                ".*{}".format(filter), str(cases[key].get("router")), re.IGNORECASE
-            ):
-                show = True
-        if "descr" in cases[key]._attrs:
-            if re.match(
-                ".*{}".format(filter), str(cases[key].get("descr")), re.IGNORECASE
-            ):
-                show = True
-        if "port" in cases[key]._attrs:
-            if re.match(
-                ".*{}".format(filter), str(cases[key].get("port")), re.IGNORECASE
-            ):
-                show = True
-
-        if show:
-            cases_sorted.append(key)
+        for lookup in ("type", "state", "router",  "descr", "port"):
+            case = cases[key]
+            if lookup in case._attrs and pattern.search(str(case.get(lookup))):
+                cases_sorted.append(key)
+                break
 
     return reversed(cases_sorted)
 
