@@ -12,6 +12,8 @@ import sys
 import textwrap
 import time
 import traceback
+from contextlib import contextmanager
+from typing import Tuple
 
 from zinolib.config import tcl
 from zinolib.ritz import (
@@ -380,10 +382,7 @@ def uiloop(screen, config):
         sys.stderr.write("You need a color terminal to run cuRitz\n")
         return
 
-    try:
-        curses.curs_set(0)
-    except Exception:
-        pass
+    safely_set_cursor_visibility(0)
     screen_size = BoxSize(*screen.getmaxyx())
     if config.kiosk:
         lb = listbox(
@@ -1067,18 +1066,11 @@ def uiUpdateCaseWindow(screen, number, utf8=False):
     else:
         p = curses.textpad.Textbox(textbox)
 
-    try:
-        curses.curs_set(1)
-    except Exception:
-        pass
-    try:
-        text = p.edit()
-    except KeyboardInterrupt:
-        return ""
-    try:
-        curses.curs_set(0)
-    except Exception:
-        pass
+    with show_visible_cursor():
+        try:
+            text = p.edit()
+        except KeyboardInterrupt:
+            return ""
 
     return text
 
@@ -1108,20 +1100,20 @@ def uiSimpleFilterWindow(screen, utf8=False):
     else:
         p = curses.textpad.Textbox(textbox)
 
-    safely_set_cursor_type(1)
-    while True:
-        try:
-            text = p.edit()
-        except KeyboardInterrupt:
-            break
-        casefilter = text.strip()
-        error = validate_filter(casefilter)
-        if not error:
-            log.debug(repr(casefilter))
-            break
-        uiShowFilterErrorWindow(screen, error)
+    with show_visible_cursor():
+        while True:
+            try:
+                text = p.edit()
+            except KeyboardInterrupt:
+                break
+            casefilter = text.strip()
+            pattern, error = compile_filter(casefilter)
+            if not error:
+                casefilter_pattern = pattern
+                log.debug(repr(casefilter))
+                break
+            uiShowFilterErrorWindow(screen, error)
 
-    safely_set_cursor_type(0)
     return True
 
 
@@ -1270,9 +1262,18 @@ def read_config(filename):
     return tcl.parse(tcl.load(filename))
 
 
-def safely_set_cursor_type(type_):
+@contextmanager
+def show_visible_cursor():
+    safely_set_cursor_visibility(1)
     try:
-        curses.curs_set(type_)
+        yield
+    finally:
+        safely_set_cursor_visibility(0)
+
+
+def safely_set_cursor_visibility(visibility):
+    try:
+        curses.curs_set(visibility)
     except Exception:
         pass
 
