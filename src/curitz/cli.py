@@ -67,7 +67,6 @@ table_structure_id = (
 table_structure = table_structure_no_id
 
 cases = {}  # type: ignore
-visible_cases = []
 cases_selected = []
 cases_selected_last = []  # type: ignore
 
@@ -178,28 +177,16 @@ def uiShowLogWindow(screen, heading, lines, config):
         if x == -1:
             pass
         elif x == curses.KEY_UP:
-            # Move up one element in list
-            if box.active_element > 0:
-                box.active_element -= 1
+            box.go_one_row_up()
 
         elif x == curses.KEY_DOWN:
-            # Move down one element in list
-            if box.active_element < len(lines) - 1:
-                box.active_element += 1
+            box.go_one_row_down()
 
         elif x == curses.KEY_NPAGE:
-            a = box.active_element + box.pagesize
-            if a < len(box) - 1:
-                box.active_element = a
-            else:
-                box.active_element = len(lines) - 1
+            box.go_one_page_down()
 
         elif x == curses.KEY_PPAGE:
-            a = box.active_element - box.pagesize
-            if a > 0:
-                box.active_element = a
-            else:
-                box.active_element = 0
+            box.go_one_page_up()
         else:
             return
         box.draw()
@@ -268,14 +255,10 @@ def actionPlugin(screen, caseid):
             if x == -1:
                 pass
             elif x == curses.KEY_UP:
-                # Move up one element in list
-                if box.active_element > 0:
-                    box.active_element -= 1
+                box.go_one_row_up()
 
             elif x == curses.KEY_DOWN:
-                # Move down one element in list
-                if box.active_element < len(box) - 1:
-                    box.active_element += 1
+                box.go_one_row_down()
 
             elif x == curses.KEY_ENTER or x == 13 or x == 10:
                 if not pkeys:
@@ -473,11 +456,11 @@ def sortCases(casedict, field="lasttrans", filter=""):
 
 
 def create_case_list(config):
-    global cases, visible_cases, lb, cases_selected, casefilter
+    global cases, lb, cases_selected, casefilter
     visible_cases = cases.keys()
     sorted_cases = sortCases(cases, field="updated", filter=casefilter)
 
-    lb.clear()
+    rows = []
     lb.heading = table_structure.format(
         id="  ID",
         selected="S",
@@ -532,7 +515,7 @@ def create_case_list(config):
                         "lowerLayerDown",
                     ] and case.state in [caseState.WORKING, caseState.WAITING]:
                         color = cYellow
-                    lb.add(
+                    rows.append(
                         BoxElement(
                             case.id,
                             table_structure.format(
@@ -556,7 +539,7 @@ def create_case_list(config):
                         caseState.WAITING,
                     ]:
                         color = cYellow
-                    lb.add(
+                    rows.append(
                         BoxElement(
                             case.id,
                             table_structure.format(
@@ -589,7 +572,7 @@ def create_case_list(config):
                         port = case.bfdaddr
                     except Exception:
                         port = "ix {}".format(case.bfdix)
-                    lb.add(
+                    rows.append(
                         BoxElement(
                             case.id,
                             table_structure.format(
@@ -618,7 +601,7 @@ def create_case_list(config):
                         caseState.WAITING,
                     ]:
                         color = cYellow
-                    lb.add(
+                    rows.append(
                         BoxElement(
                             case.id,
                             table_structure.format(
@@ -642,7 +625,7 @@ def create_case_list(config):
                         caseState.WAITING,
                     ]:
                         color = cYellow
-                    lb.add(
+                    rows.append(
                         BoxElement(
                             case.id,
                             table_structure.format(
@@ -663,6 +646,8 @@ def create_case_list(config):
                 )
                 log.fatal(repr(case._attrs))
                 raise
+
+    lb.set_elements(rows)
 
 
 def doKeepalive():
@@ -698,6 +683,10 @@ def runner(screen, config):
 
     screen.clear()
     screen.refresh()
+
+    # Every case that is going to arrive has arrived, so from here on an empty
+    # list means the filter matched nothing, not that we are still loading
+    lb.empty_message = "Nothing to display"
 
     create_case_list(config)
     draw(screen, config.Server)
@@ -742,37 +731,22 @@ def runner(screen, config):
 
         elif x == curses.KEY_UP:
             needs_repaint = True
-            # Move up one element in list
-            if lb.active_element > 0:
-                lb.active_element -= 1
+            lb.go_one_row_up()
 
         elif x == curses.KEY_DOWN:
             needs_repaint = True
-            # Move down one element in list
-            if lb.active_element < len(lb) - 1:
-                lb.active_element += 1
+            lb.go_one_row_down()
 
         elif x == curses.KEY_NPAGE:
             needs_repaint = True
-            a = lb.active_element + lb.pagesize
-            if a < len(lb) - 1:
-                lb.active_element = a
-            else:
-                lb.active_element = len(lb) - 1
+            lb.go_one_page_down()
 
         elif x == curses.KEY_PPAGE:
             needs_repaint = True
-            a = lb.active_element - lb.pagesize
-            if a > 0:
-                lb.active_element = a
-            else:
-                lb.active_element = 0
+            lb.go_one_page_up()
 
         elif x == ord("p"):
-            if cases_selected:
-                uiPollCases(cases_selected)
-            else:
-                uiPollCases([lb.active.id])
+            uiPollCases(cases_to_act_on(lb, cases, cases_selected))
 
         elif x == ord("f"):
             # Change Filter
@@ -782,20 +756,19 @@ def runner(screen, config):
 
         elif x == ord("m"):
             # Clear flapping
-            if cases_selected:
-                uiCFlapCases(cases_selected)
-            else:
-                uiCFlapCases([lb.active.id])
+            uiCFlapCases(cases_to_act_on(lb, cases, cases_selected))
 
         elif x == ord("x"):
             needs_rebuild = True
             selection_time = time.time()
 
             # (de)select a element
-            if lb.active.id in cases_selected:
-                cases_selected.remove(lb.active.id)
-            else:
-                cases_selected.append(lb.active.id)
+            caseid = case_under_cursor(screen, lb, cases)
+            if caseid is not None:
+                if caseid in cases_selected:
+                    cases_selected.remove(caseid)
+                else:
+                    cases_selected.append(caseid)
 
         elif x == ord("X"):
             needs_rebuild = True
@@ -816,20 +789,16 @@ def runner(screen, config):
         elif x == ord("u"):
             needs_rebuild = True
             # Update selected cases
-            if cases_selected:
-                uiUpdateCases(screen, cases_selected, config.UTF8)
-            else:
-                uiUpdateCases(screen, [lb.active.id], config.UTF8)
+            uiUpdateCases(
+                screen, cases_to_act_on(lb, cases, cases_selected), config.UTF8
+            )
 
         elif x == ord("U"):
             needs_rebuild = True
             # Update selected cases
-            if cases_selected:
-                uiUpdateCases(screen, cases_selected, config.UTF8)
-                uiSetState(screen, cases_selected, config)
-            else:
-                uiUpdateCases(screen, [lb.active.id], config.UTF8)
-                uiSetState(screen, [lb.active.id], config)
+            caseids = cases_to_act_on(lb, cases, cases_selected)
+            uiUpdateCases(screen, caseids, config.UTF8)
+            uiSetState(screen, caseids, config)
 
         elif x == ord("i"):
             needs_rebuild = True
@@ -842,10 +811,7 @@ def runner(screen, config):
         elif x == ord("s"):
             needs_rebuild = True
             # Update selected cases
-            if cases_selected:
-                uiSetState(screen, cases_selected, config)
-            else:
-                uiSetState(screen, [lb.active.id], config)
+            uiSetState(screen, cases_to_act_on(lb, cases, cases_selected), config)
 
         elif x == ord("y"):
             needs_rebuild = True
@@ -857,28 +823,32 @@ def runner(screen, config):
                 cases.pop(id, None)
                 if id in cases_selected:
                     cases_selected.remove(id)
-            if lb.active_element >= len(visible_cases):
-                # If the current active element is beyond the item list end
-                # then move it to the last visible element
-                lb.active_element = len(visible_cases) - 1
 
         elif x == ord("1"):
             # A plugin is handed the live case object and may change it
             needs_rebuild = True
-            actionPlugin(screen, lb.active.id)
+            caseid = case_under_cursor(screen, lb, cases)
+            if caseid is not None:
+                actionPlugin(screen, caseid)
 
         elif x == ord("="):
             needs_repaint = True
-            uiShowAttr(screen, lb.active.id, config)
+            caseid = case_under_cursor(screen, lb, cases)
+            if caseid is not None:
+                uiShowAttr(screen, caseid, config)
 
         elif x == curses.KEY_ENTER or x == 10 or x == 13:  # [ENTER], CR or LF
             needs_repaint = True
-            uiShowHistory(screen, lb.active.id, config)
+            caseid = case_under_cursor(screen, lb, cases)
+            if caseid is not None:
+                uiShowHistory(screen, caseid, config)
 
         elif x == ord("l"):
             # [ENTER], CR or LF
             needs_repaint = True
-            uiShowLog(screen, lb.active.id, config)
+            caseid = case_under_cursor(screen, lb, cases)
+            if caseid is not None:
+                uiShowLog(screen, caseid, config)
 
         elif x == 12:
             # CTRL + L
@@ -909,6 +879,56 @@ def runner(screen, config):
             updateStatus(screen, "Sending keepalive")
             doKeepalive()
             updateStatus(screen, "")
+
+
+def case_under_cursor(screen, box, known_cases):
+    """The id of the case under the cursor, telling the operator if there is none.
+
+    :param screen: the screen to report on
+    :param box: the listbox holding the case rows
+    :param known_cases: the cases by id
+    :return: the case id, or None if there is no case to act on
+    """
+    caseid = active_case_id(box, known_cases)
+    if caseid is None:
+        updateStatus(screen, "No case here")
+    return caseid
+
+
+def cases_to_act_on(box, known_cases, selection):
+    """The cases the next action applies to.
+
+    Those the operator has selected, or else the one under the cursor.  The
+    selection is filtered against the known cases as belt and braces; poll()
+    already prunes it when it drops a case.
+
+    :param box: the listbox holding the case rows
+    :param known_cases: the cases by id
+    :param selection: the case ids the operator has selected
+    :return: a list of case ids, empty if there is nothing to act on
+    """
+    if selection:
+        return [caseid for caseid in selection if caseid in known_cases]
+    caseid = active_case_id(box, known_cases)
+    return [caseid] if caseid is not None else []
+
+
+def active_case_id(box, known_cases):
+    """The id of the case under the cursor.
+
+    The cursor can outlive the case it is on: poll() drops cases in the same
+    pass of the loop that dispatches the keypress, and the list is not rebuilt
+    until after the key has been handled.
+
+    :param box: the listbox holding the case rows
+    :param known_cases: the cases by id
+    :return: the case id, or None if the list is empty or the case has gone
+        away since the list was last rebuilt
+    """
+    element = box.active
+    if element is None or element.id not in known_cases:
+        return None
+    return element.id
 
 
 def draw(screen, server):
@@ -956,6 +976,8 @@ def uiCFlapCases(caseids):
 
 
 def uiUpdateCases(screen, caseids, utf8=False):
+    if not caseids:
+        return
     update = uiUpdateCaseWindow(screen, len(caseids), utf8)
     if update:
         for case in caseids:
@@ -963,6 +985,8 @@ def uiUpdateCases(screen, caseids, utf8=False):
 
 
 def uiSetState(screen, caseids, config):
+    if not caseids:
+        return
     new_state = uiSetStateWindow(screen, len(caseids), config)
     if new_state:
         for case in caseids:
@@ -994,14 +1018,10 @@ def uiSetStateWindow(screen, number, config):
             if x == -1:
                 pass
             elif x == curses.KEY_UP:
-                # Move up one element in list
-                if box.active_element > 0:
-                    box.active_element -= 1
+                box.go_one_row_up()
 
             elif x == curses.KEY_DOWN:
-                # Move down one element in list
-                if box.active_element < len(box) - 1:
-                    box.active_element += 1
+                box.go_one_row_down()
 
             elif x == ord("o") or x == ord("O"):
                 box.active_element = 1
