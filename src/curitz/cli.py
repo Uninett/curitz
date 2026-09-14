@@ -78,7 +78,7 @@ screen_size = None
 lb = None
 session = None
 notifier = None
-casefilter = None
+casefilter_re = re.compile("")
 
 log = logging.getLogger("cuRitz")
 
@@ -364,8 +364,7 @@ def downtimeShortner(td):
 
 
 def uiloop(screen, config):
-    global lb, session, notifier, cases, table_structure, screen_size, casefilter
-    casefilter = ""
+    global lb, session, notifier, cases, table_structure, screen_size
 
     curses.noecho()
     curses.cbreak()
@@ -414,9 +413,8 @@ def uiloop(screen, config):
                 pass
 
 
-def sortCases(casedict, field="lasttrans", filter=""):
+def sortCases(casedict, pattern, field="lasttrans"):
     cases_sorted = []
-    pattern = re.compile(filter, re.IGNORECASE)
     for key in sorted(
         cases,
         key=lambda k: (
@@ -424,7 +422,12 @@ def sortCases(casedict, field="lasttrans", filter=""):
             cases[k]._attrs[field],
         ),
     ):
-        for lookup in ("type", "state", "router",  "descr", "port"):
+        # Filter not set
+        if not pattern.pattern:
+            cases_sorted.append(key)
+            continue
+        # Filter set, check each case
+        for lookup in ("type", "state", "router", "descr", "port"):
             case = cases[key]
             if lookup in case._attrs and pattern.search(str(case.get(lookup))):
                 cases_sorted.append(key)
@@ -434,9 +437,9 @@ def sortCases(casedict, field="lasttrans", filter=""):
 
 
 def create_case_list(config):
-    global cases, lb, cases_selected, casefilter
+    global cases, lb, cases_selected, casefilter_re
     visible_cases = cases.keys()
-    sorted_cases = sortCases(cases, field="updated", filter=casefilter)
+    sorted_cases = sortCases(cases, casefilter_re, field="updated")
 
     rows = []
     lb.heading = table_structure.format(
@@ -1080,17 +1083,19 @@ def uiShowFilterErrorWindow(screen, error):
     box.box()
     box.addstr(0, 1, "Error! Invalid filter!")
     box.addstr(2, 2, "This looks like a broken regular expression:")
-    box.addstr(4, 6, casefilter)
+    box.addstr(4, 6, casefilter_pattern.pattern)
     box.addstr(6, 6, str(error))
     box.addstr(8, 1, "Fix/remove filter and press ENTER to close this window")
     box.refresh()
 
 
 def uiSimpleFilterWindow(screen, utf8=False):
-    global casefilter
+    global casefilter_re
+    usage = "Ctrl+C to Abort    [ENTER] OK    Ctrl+H = Backspace"
+
     border = curses.newwin(9, 62, 4, 9)
     textbox = curses.newwin(1, 60, 6, 10)
-    textbox.addstr(0, 0, casefilter)
+    textbox.addstr(0, 0, casefilter_re.pattern)
     border.box()
     border.addstr(0, 1, "Really Simple Filter Generator")
     border.addstr(8, 1, "Ctrl+C to Abort    [ENTER] OK    Ctrl+H = Backspace")
@@ -1109,7 +1114,7 @@ def uiSimpleFilterWindow(screen, utf8=False):
             casefilter = text.strip()
             pattern, error = compile_filter(casefilter)
             if not error:
-                casefilter_pattern = pattern
+                casefilter_re = pattern
                 log.debug(repr(casefilter))
                 break
             uiShowFilterErrorWindow(screen, error)
@@ -1278,11 +1283,11 @@ def safely_set_cursor_visibility(visibility):
         pass
 
 
-def validate_filter(casefilter):
+def compile_filter(casefilter: str) -> Tuple[re.Pattern | None, str]:
     try:
-        re.compile(casefilter, re.IGNORECASE)
+        return re.compile(casefilter, re.IGNORECASE), ""
     except re.error as e:
-        return e
+        return None, str(e)
 
 
 if __name__ == "__main__":
