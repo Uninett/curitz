@@ -1,6 +1,6 @@
 import curses
-from typing import NamedTuple, List
 import logging
+from typing import List, NamedTuple
 
 log = logging.getLogger("cuRitz")
 

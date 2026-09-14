@@ -1,32 +1,34 @@
 #!/usr/bin/env python3
+import argparse
 import curses
 import curses.textpad
-import logging
 import datetime
-import argparse
+import importlib
+import locale
+import logging
+import os
+import re
 import sys
 import textwrap
-import re
 import time
-import locale
-import os
 import traceback
-import importlib
 
-from curitz import __version__
-from curitz.reverse_dns import ReverseResolver
-import curitz.textpad as utf8textpad
-from curitz.culistbox import listbox, BoxSize, BoxElement
 from zinolib.config import tcl
 from zinolib.ritz import (
-    ritz,
-    notifier as ritz_notifier,
-    caseType,
-    caseState,
     NotConnectedError,
     ProtocolError,
+    caseState,
+    caseType,
+    ritz,
+)
+from zinolib.ritz import (
+    notifier as ritz_notifier,
 )
 
+import curitz.textpad as utf8textpad
+from curitz import __version__
+from curitz.culistbox import BoxElement, BoxSize, listbox
+from curitz.reverse_dns import ReverseResolver
 
 DEFAULT_PROFILE = "default"
 
