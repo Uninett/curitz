@@ -5,7 +5,7 @@ of the key loop that dispatches the keypress, and the case list is not rebuilt
 until after the key has been handled.
 """
 
-from curitz.cli import active_case_id, cases_to_act_on
+from curitz.cli import active_case_id, cases_to_act_on, toggle_selection
 from curitz.culistbox import BoxElement, BoxSize, listbox
 
 
@@ -41,6 +41,29 @@ class TestCasesToActOn:
         box = make_listbox(case_ids=[0, 1])
 
         assert cases_to_act_on(box, cases_by_id(0, 1), []) == [0]
+
+
+class TestToggleSelection:
+    def test_when_the_case_is_not_selected_it_should_be_added(self):
+        selection = [1, 2]
+
+        toggle_selection(3, selection)
+
+        assert selection == [1, 2, 3]
+
+    def test_when_the_case_is_already_selected_it_should_be_removed(self):
+        selection = [1, 2, 3]
+
+        toggle_selection(2, selection)
+
+        assert selection == [1, 3]
+
+    def test_when_case_zero_is_toggled_it_should_be_added(self):
+        selection = []
+
+        toggle_selection(0, selection)
+
+        assert selection == [0]
 
 
 class TestActiveCaseId:

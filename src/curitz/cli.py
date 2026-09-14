@@ -767,10 +767,19 @@ def runner(screen, config):
             # (de)select a element
             caseid = case_under_cursor(screen, lb, cases)
             if caseid is not None:
-                if caseid in cases_selected:
-                    cases_selected.remove(caseid)
-                else:
-                    cases_selected.append(caseid)
+                toggle_selection(caseid, cases_selected)
+
+        elif x == ord("*"):
+            needs_rebuild = True
+            selection_time = time.time()
+
+            # (de)select a case and step down to the next one, so that marking
+            # a run of them needs no arrow keys in between.  The last row is
+            # where it stops: the listbox will not move the cursor off the end
+            caseid = case_under_cursor(screen, lb, cases)
+            if caseid is not None:
+                toggle_selection(caseid, cases_selected)
+                lb.go_one_row_down()
 
         elif x == ord("X"):
             needs_rebuild = True
@@ -883,6 +892,19 @@ def runner(screen, config):
             updateStatus(screen, "")
 
 
+def toggle_selection(caseid: int, selection: list[int]) -> None:
+    """Add a case to the selection, or remove it if it is already there.
+
+    :param caseid: the id of the case to toggle
+    :param selection: the list of selected case ids, modified in place
+    :return: None
+    """
+    if caseid in selection:
+        selection.remove(caseid)
+    else:
+        selection.append(caseid)
+
+
 def case_under_cursor(screen, box, known_cases):
     """The id of the case under the cursor, telling the operator if there is none.
 
@@ -957,7 +979,7 @@ def draw(screen, server):
     screen.addstr(
         screen_size.height - 1,
         0,
-        "<ENTER>=Show history  <UP/DOWN>=Navigate q=Quit  l=Show Logs   x=(de)select  c=Clear selection"[
+        "<ENTER>=Show history <UP/DOWN>=Navigate q=Quit l=Show Logs x=(de)select *=(de)select+move c=Clear selection"[
             : screen_size.length - 1
         ],
     )  # noqa
