@@ -13,7 +13,6 @@ import textwrap
 import time
 import traceback
 from contextlib import contextmanager
-from typing import Tuple
 
 from zinolib.config import tcl
 from zinolib.ritz import (
@@ -1078,17 +1077,6 @@ def uiUpdateCaseWindow(screen, number, utf8=False):
     return text
 
 
-def uiShowFilterErrorWindow(screen, error):
-    box = curses.newwin(9, 62, 4+9+1, 9)
-    box.box()
-    box.addstr(0, 1, "Error! Invalid filter!")
-    box.addstr(2, 2, "This looks like a broken regular expression:")
-    box.addstr(4, 6, casefilter_pattern.pattern)
-    box.addstr(6, 6, str(error))
-    box.addstr(8, 1, "Fix/remove filter and press ENTER to close this window")
-    box.refresh()
-
-
 def uiSimpleFilterWindow(screen, utf8=False):
     global casefilter_re
     usage = "Ctrl+C to Abort    [ENTER] OK    Ctrl+H = Backspace"
@@ -1097,8 +1085,8 @@ def uiSimpleFilterWindow(screen, utf8=False):
     textbox = curses.newwin(1, 60, 6, 10)
     textbox.addstr(0, 0, casefilter_re.pattern)
     border.box()
-    border.addstr(0, 1, "Really Simple Filter Generator")
-    border.addstr(8, 1, "Ctrl+C to Abort    [ENTER] OK    Ctrl+H = Backspace")
+    border.addstr(0, 1, "Filter Generator (python regexp)")
+    border.addstr(8, 1, usage)
     border.refresh()
     if utf8:
         p = utf8textpad.Textbox(textbox)
@@ -1117,9 +1105,34 @@ def uiSimpleFilterWindow(screen, utf8=False):
                 casefilter_re = pattern
                 log.debug(repr(casefilter))
                 break
-            uiShowFilterErrorWindow(screen, error)
+
+            show_error_in_filterwindow(border, error)
 
     return True
+
+
+def compile_filter(casefilter: str) -> tuple[re.Pattern | None, str]:
+    """Compile filter pattern ONCE, with error-handling
+
+    On valid pattern: returns (pattern object, empty error string)
+    On invalid pattern: returns (None, error-string)
+    """
+    try:
+        return re.compile(casefilter, re.IGNORECASE), ""
+    except re.error as e:
+        return None, str(e)
+
+
+def show_error_in_filterwindow(box, error: str):
+    """Alter existing filter window to show error"""
+    TEXT_WIDTH = 55
+    # This line MUST be the same length as "usage" in the actual filter box
+    usage = "Edit then press ENTER to retry    Ctrl+C to go back"
+
+    box.addstr(4, 1, "This looks like an invalid regular expression!")
+    box.addstr(6, 4, str(error)[:TEXT_WIDTH].ljust(TEXT_WIDTH))
+    box.addstr(8, 1, usage)
+    box.refresh()
 
 
 def poll(config):
@@ -1281,13 +1294,6 @@ def safely_set_cursor_visibility(visibility):
         curses.curs_set(visibility)
     except Exception:
         pass
-
-
-def compile_filter(casefilter: str) -> Tuple[re.Pattern | None, str]:
-    try:
-        return re.compile(casefilter, re.IGNORECASE), ""
-    except re.error as e:
-        return None, str(e)
 
 
 if __name__ == "__main__":
