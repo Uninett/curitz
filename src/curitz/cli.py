@@ -12,6 +12,7 @@ import sys
 import textwrap
 import time
 import traceback
+from contextlib import contextmanager
 
 from zinolib.config import tcl
 from zinolib.ritz import (
@@ -76,7 +77,7 @@ screen_size = None
 lb = None
 session = None
 notifier = None
-casefilter = None
+casefilter_re = re.compile("")
 
 log = logging.getLogger("cuRitz")
 
@@ -362,8 +363,7 @@ def downtimeShortner(td):
 
 
 def uiloop(screen, config):
-    global lb, session, notifier, cases, table_structure, screen_size, casefilter
-    casefilter = ""
+    global lb, session, notifier, cases, table_structure, screen_size
 
     curses.noecho()
     curses.cbreak()
@@ -380,10 +380,7 @@ def uiloop(screen, config):
         sys.stderr.write("You need a color terminal to run cuRitz\n")
         return
 
-    try:
-        curses.curs_set(0)
-    except Exception:
-        pass
+    safely_set_cursor_visibility(0)
     screen_size = BoxSize(*screen.getmaxyx())
     if config.kiosk:
         lb = listbox(
@@ -415,7 +412,7 @@ def uiloop(screen, config):
                 pass
 
 
-def sortCases(casedict, field="lasttrans", filter=""):
+def sortCases(casedict, pattern, field="lasttrans"):
     cases_sorted = []
     for key in sorted(
         cases,
@@ -424,43 +421,24 @@ def sortCases(casedict, field="lasttrans", filter=""):
             cases[k]._attrs[field],
         ),
     ):
-        show = False
-        if "type" in cases[key]._attrs:
-            if re.match(
-                ".*{}".format(filter), str(cases[key].get("type")), re.IGNORECASE
-            ):
-                show = True
-        if "state" in cases[key]._attrs:
-            if re.match(
-                ".*{}".format(filter), str(cases[key].get("state")), re.IGNORECASE
-            ):
-                show = True
-        if "router" in cases[key]._attrs:
-            if re.match(
-                ".*{}".format(filter), str(cases[key].get("router")), re.IGNORECASE
-            ):
-                show = True
-        if "descr" in cases[key]._attrs:
-            if re.match(
-                ".*{}".format(filter), str(cases[key].get("descr")), re.IGNORECASE
-            ):
-                show = True
-        if "port" in cases[key]._attrs:
-            if re.match(
-                ".*{}".format(filter), str(cases[key].get("port")), re.IGNORECASE
-            ):
-                show = True
-
-        if show:
+        # Filter not set
+        if not pattern.pattern:
             cases_sorted.append(key)
+            continue
+        # Filter set, check each case
+        for lookup in ("type", "state", "router", "descr", "port"):
+            case = cases[key]
+            if lookup in case._attrs and pattern.search(str(case.get(lookup))):
+                cases_sorted.append(key)
+                break
 
     return reversed(cases_sorted)
 
 
 def create_case_list(config):
-    global cases, lb, cases_selected, casefilter
+    global cases, lb, cases_selected, casefilter_re
     visible_cases = cases.keys()
-    sorted_cases = sortCases(cases, field="updated", filter=casefilter)
+    sorted_cases = sortCases(cases, casefilter_re, field="updated")
 
     rows = []
     lb.heading = table_structure.format(
@@ -1090,52 +1068,71 @@ def uiUpdateCaseWindow(screen, number, utf8=False):
     else:
         p = curses.textpad.Textbox(textbox)
 
-    try:
-        curses.curs_set(1)
-    except Exception:
-        pass
-    try:
-        text = p.edit()
-    except KeyboardInterrupt:
-        return ""
-    try:
-        curses.curs_set(0)
-    except Exception:
-        pass
+    with show_visible_cursor():
+        try:
+            text = p.edit()
+        except KeyboardInterrupt:
+            return ""
 
     return text
 
 
 def uiSimpleFilterWindow(screen, utf8=False):
-    global casefilter
+    global casefilter_re
+    usage = "Ctrl+C to Abort    [ENTER] OK    Ctrl+H = Backspace"
+
     border = curses.newwin(9, 62, 4, 9)
     textbox = curses.newwin(1, 60, 6, 10)
-    textbox.addstr(0, 0, casefilter)
+    textbox.addstr(0, 0, casefilter_re.pattern)
     border.box()
-    border.addstr(0, 1, "Really Simple Filter Generator")
-    border.addstr(8, 1, "Ctrl+C to Abort    [ENTER] OK    Ctrl+H = Backspace")
+    border.addstr(0, 1, "Filter Generator (python regexp)")
+    border.addstr(8, 1, usage)
     border.refresh()
     if utf8:
         p = utf8textpad.Textbox(textbox)
     else:
         p = curses.textpad.Textbox(textbox)
 
-    try:
-        curses.curs_set(1)
-    except Exception:
-        pass
-    try:
-        text = p.edit()
-    except KeyboardInterrupt:
-        return ""
-    try:
-        curses.curs_set(0)
-    except Exception:
-        pass
+    with show_visible_cursor():
+        while True:
+            try:
+                text = p.edit()
+            except KeyboardInterrupt:
+                break
+            casefilter = text.strip()
+            pattern, error = compile_filter(casefilter)
+            if not error:
+                casefilter_re = pattern
+                log.debug(repr(casefilter))
+                break
 
-    casefilter = text.strip()
-    log.debug(repr(casefilter))
+            show_error_in_filterwindow(border, error)
+
     return True
+
+
+def compile_filter(casefilter: str) -> tuple[re.Pattern | None, str]:
+    """Compile filter pattern ONCE, with error-handling
+
+    On valid pattern: returns (pattern object, empty error string)
+    On invalid pattern: returns (None, error-string)
+    """
+    try:
+        return re.compile(casefilter, re.IGNORECASE), ""
+    except re.error as e:
+        return None, str(e)
+
+
+def show_error_in_filterwindow(box, error: str):
+    """Alter existing filter window to show error"""
+    TEXT_WIDTH = 55
+    # This line MUST be the same length as "usage" in the actual filter box
+    usage = "Edit then press ENTER to retry    Ctrl+C to go back"
+
+    box.addstr(4, 1, "This looks like an invalid regular expression!")
+    box.addstr(6, 4, str(error)[:TEXT_WIDTH].ljust(TEXT_WIDTH))
+    box.addstr(8, 1, usage)
+    box.refresh()
 
 
 def poll(config):
@@ -1281,6 +1278,22 @@ def read_config(filename):
     :raises FileNotFoundError: if the file does not exist
     """
     return tcl.parse(tcl.load(filename))
+
+
+@contextmanager
+def show_visible_cursor():
+    safely_set_cursor_visibility(1)
+    try:
+        yield
+    finally:
+        safely_set_cursor_visibility(0)
+
+
+def safely_set_cursor_visibility(visibility):
+    try:
+        curses.curs_set(visibility)
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":
