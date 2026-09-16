@@ -13,6 +13,7 @@ import textwrap
 import time
 import traceback
 from contextlib import contextmanager
+from dataclasses import dataclass, field
 
 from zinolib.config import tcl
 from zinolib.ritz import (
@@ -37,6 +38,18 @@ DEFAULT_PROFILE = "default"
 # the age and downtime columns keep ticking
 CASE_LIST_MAX_AGE = 10
 
+
+# holds object of configured colors
+@dataclass(kw_only=True)
+class ColorConfig:
+    cRed: list[int] = field(default_factory=list)
+    cYellow: list[int] = field(default_factory=list)
+    cBlue: list[int] = field(default_factory=list)
+    cGreen: list[int] = field(default_factory=list)
+    cDefault: list[int] = field(default_factory=list)
+
+
+Colors = ColorConfig()  # global
 
 # Hotfix to fix OSX reporting only "UTF-8" on LC_CTYPE
 try:
@@ -369,15 +382,7 @@ def uiloop(screen, config):
     curses.cbreak()
     screen.keypad(1)
     screen.timeout(1 * 1000)  # mSec timeout
-    try:
-        curses.start_color()
-        curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_CYAN)
-        curses.init_pair(10, curses.COLOR_RED, curses.COLOR_BLACK)
-        curses.init_pair(11, curses.COLOR_YELLOW, curses.COLOR_BLACK)
-        curses.init_pair(12, curses.COLOR_CYAN, curses.COLOR_BLACK)
-        curses.init_pair(13, curses.COLOR_GREEN, curses.COLOR_BLACK)
-    except curses.error:
-        sys.stderr.write("You need a color terminal to run cuRitz\n")
+    if not init_colors(config):
         return
 
     safely_set_cursor_visibility(0)
@@ -410,6 +415,38 @@ def uiloop(screen, config):
                 runner(screen, config)
             except KeyboardInterrupt:
                 pass
+
+
+def init_colors(config):
+    try:
+        curses.start_color()
+        curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_CYAN)
+        curses.init_pair(10, curses.COLOR_RED, curses.COLOR_BLACK)
+        curses.init_pair(11, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+        curses.init_pair(12, curses.COLOR_CYAN, curses.COLOR_BLACK)
+        curses.init_pair(13, curses.COLOR_GREEN, curses.COLOR_BLACK)
+        config_color(config)
+        return True
+    except curses.error:
+        sys.stderr.write("You need a color terminal to run cuRitz\n")
+    return False
+
+
+def config_color(config):
+    global Colors
+    if config.nocolor:
+        Colors = ColorConfig(
+            cRed=[curses.A_BOLD],
+            cDefault=[curses.A_NORMAL],
+        )
+    else:
+        Colors = ColorConfig(
+            cRed=[curses.color_pair(10)],
+            cYellow=[curses.color_pair(11)],
+            cBlue=[curses.color_pair(12)],
+            cGreen=[curses.color_pair(13)],
+            cDefault=[curses.color_pair(0)],
+        )
 
 
 def sortCases(casedict, pattern, field="lasttrans"):
@@ -468,33 +505,24 @@ def create_case_list(config):
                     common["downtime"] = downtimeShortner(case.downtime)
                 else:
                     common["downtime"] = ""
+
                 color = []
-                if config.nocolor:
-                    cRed = [curses.A_BOLD]
-                    cYellow = []
-                    cBlue = []
-                    cGreen = []
-                else:
-                    cRed = [curses.color_pair(10)]
-                    cYellow = [curses.color_pair(11)]
-                    cBlue = [curses.color_pair(12)]
-                    cGreen = [curses.color_pair(13)]
 
                 if case.type == caseType.PORTSTATE:
                     if case.state in [caseState.IGNORED]:
-                        color = cBlue
+                        color = Colors.cBlue
                     elif case.state in [caseState.CLOSED]:
-                        color = cGreen
+                        color = Colors.cGreen
                     elif (
                         case.portstate in ["down", "lowerLayerDown"]
                         and case.state == caseState.OPEN
                     ):
-                        color = cRed
+                        color = Colors.cRed
                     elif case.portstate in [
                         "down",
                         "lowerLayerDown",
                     ] and case.state in [caseState.WORKING, caseState.WAITING]:
-                        color = cYellow
+                        color = Colors.cYellow
                     rows.append(
                         BoxElement(
                             case.id,
@@ -509,16 +537,16 @@ def create_case_list(config):
                     )
                 elif case.type == caseType.BGP:
                     if case.state in [caseState.IGNORED]:
-                        color = cBlue
+                        color = Colors.cBlue
                     elif case.state in [caseState.CLOSED]:
-                        color = cGreen
+                        color = Colors.cGreen
                     elif case.bgpos == "down" and case.state == caseState.OPEN:
-                        color = cRed
+                        color = Colors.cRed
                     elif case.bgpos == "down" and case.state in [
                         caseState.WORKING,
                         caseState.WAITING,
                     ]:
-                        color = cYellow
+                        color = Colors.cYellow
                     rows.append(
                         BoxElement(
                             case.id,
@@ -537,16 +565,16 @@ def create_case_list(config):
                     )
                 elif case.type == caseType.BFD:
                     if case.state in [caseState.IGNORED]:
-                        color = cBlue
+                        color = Colors.cBlue
                     elif case.state in [caseState.CLOSED]:
-                        color = cGreen
+                        color = Colors.cGreen
                     elif case.bfdstate == "down" and case.state == caseState.OPEN:
-                        color = cRed
+                        color = Colors.cRed
                     elif case.bfdstate == "down" and case.state in [
                         caseState.WORKING,
                         caseState.WAITING,
                     ]:
-                        color = cYellow
+                        color = Colors.cYellow
 
                     try:
                         port = case.bfdaddr
@@ -568,19 +596,19 @@ def create_case_list(config):
                     )
                 elif case.type == caseType.REACHABILITY:
                     if case.state in [caseState.IGNORED]:
-                        color = cBlue
+                        color = Colors.cBlue
                     elif case.state in [caseState.CLOSED]:
-                        color = cGreen
+                        color = Colors.cGreen
                     elif (
                         case.reachability == "no-response"
                         and case.state == caseState.OPEN
                     ):
-                        color = cRed
+                        color = Colors.cRed
                     elif case.reachability == "no-response" and case.state in [
                         caseState.WORKING,
                         caseState.WAITING,
                     ]:
-                        color = cYellow
+                        color = Colors.cYellow
                     rows.append(
                         BoxElement(
                             case.id,
@@ -595,16 +623,16 @@ def create_case_list(config):
                     )
                 elif case.type == caseType.ALARM:
                     if case.state in [caseState.IGNORED]:
-                        color = cBlue
+                        color = Colors.cBlue
                     elif case.state in [caseState.CLOSED]:
-                        color = cGreen
+                        color = Colors.cGreen
                     elif case.alarm_count > 0 and case.state == caseState.OPEN:
-                        color = cRed
+                        color = Colors.cRed
                     elif case.alarm_count > 0 and case.state in [
                         caseState.WORKING,
                         caseState.WAITING,
                     ]:
-                        color = cYellow
+                        color = Colors.cYellow
                     rows.append(
                         BoxElement(
                             case.id,
@@ -1129,7 +1157,7 @@ def show_error_in_filterwindow(box, error: str):
     # This line MUST be the same length as "usage" in the actual filter box
     usage = "Edit then press ENTER to retry    Ctrl+C to go back"
 
-    box.addstr(4, 1, "This looks like an invalid regular expression!")
+    box.addstr(4, 1, "This looks like an invalid regular expression!", *Colors.cRed)
     box.addstr(6, 4, str(error)[:TEXT_WIDTH].ljust(TEXT_WIDTH))
     box.addstr(8, 1, usage)
     box.refresh()
