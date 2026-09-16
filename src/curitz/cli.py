@@ -1149,9 +1149,7 @@ def show_error_in_filterwindow(box, error: str):
     # This line MUST be the same length as "usage" in the actual filter box
     usage = "Edit then press ENTER to retry    Ctrl+C to go back"
 
-    box.attrset(*Colors.cRed)
-    box.addstr(4, 1, "This looks like an invalid regular expression!")
-    box.attrset(*Colors.cDefault)
+    box.addstr(4, 1, "This looks like an invalid regular expression!", *Colors.cRed)
     box.addstr(6, 4, str(error)[:TEXT_WIDTH].ljust(TEXT_WIDTH))
     box.addstr(8, 1, usage)
     box.refresh()
