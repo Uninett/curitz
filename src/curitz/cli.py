@@ -13,6 +13,7 @@ import textwrap
 import time
 import traceback
 from contextlib import contextmanager
+from dataclasses import dataclass, field
 
 from zinolib.config import tcl
 from zinolib.ritz import (
@@ -37,8 +38,18 @@ DEFAULT_PROFILE = "default"
 # the age and downtime columns keep ticking
 CASE_LIST_MAX_AGE = 10
 
+
 # holds object of configured colors
-Colors = None
+@dataclass(kw_only=True)
+class ColorConfig:
+    cRed: list[int] = field(default_factory=list)
+    cYellow: list[int] = field(default_factory=list)
+    cBlue: list[int] = field(default_factory=list)
+    cGreen: list[int] = field(default_factory=list)
+    cDefault: list[int] = field(default_factory=list)
+
+
+Colors = ColorConfig()  # global
 
 # Hotfix to fix OSX reporting only "UTF-8" on LC_CTYPE
 try:
@@ -424,21 +435,18 @@ def init_colors(config):
 def config_color(config):
     global Colors
     if config.nocolor:
-
-        class Colors:
-            cRed = [curses.A_BOLD]
-            cYellow = []
-            cBlue = []
-            cGreen = []
-            cDefault = [curses.A_NORMAL]
+        Colors = ColorConfig(
+            cRed=[curses.A_BOLD],
+            cDefault=[curses.A_NORMAL],
+        )
     else:
-
-        class Colors:
-            cRed = [curses.color_pair(10)]
-            cYellow = [curses.color_pair(11)]
-            cBlue = [curses.color_pair(12)]
-            cGreen = [curses.color_pair(13)]
-            cDefault = [curses.color_pair(0)]
+        Colors = ColorConfig(
+            cRed=[curses.color_pair(10)],
+            cYellow=[curses.color_pair(11)],
+            cBlue=[curses.color_pair(12)],
+            cGreen=[curses.color_pair(13)],
+            cDefault=[curses.color_pair(0)],
+        )
 
 
 def sortCases(casedict, pattern, field="lasttrans"):
