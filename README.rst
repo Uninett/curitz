@@ -7,6 +7,9 @@ interface to interact with a Zino server.
 
 Split from internal project PyRitz on 2023-03-30.
 
+For information on how to use curitz see the Zino documentation on
+`Read the Docs <https://zino.readthedocs.io/en/latest/clients/curitz.html>`_.
+
 Configuration
 =============
 
